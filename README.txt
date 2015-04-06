@@ -12,8 +12,8 @@ Requirements
 
 Installation
 ---------------
-pip install metameta
+python setup.py install
 
-Useage
+Usage
 ----------
 metameta <tool name> [arguments for tool]
