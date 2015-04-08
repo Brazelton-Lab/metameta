@@ -3,11 +3,11 @@
 from setuptools import setup
 
 setup(name = 'metameta',
-      version = '0.0.0.7',
+      version = '0.0.0.8',
       description = 'Toolset for analyzing'\
           + 'metatranscriptome data mapped onto metagenomic data',
       classifiers = [
-            'Development Status :: 1 - Planning',
+            'Development Status :: 2 - Pre-Alpha',
             'Intended Audience :: Science/Research',
             'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
             'Natural Language :: English',
@@ -19,7 +19,7 @@ setup(name = 'metameta',
           + 'short reads mapping alignment',
       url = 'https://github.com/Brazelton-Lab/metameta',
       download_url = 'https://github.com/Brazelton-Lab/metameta/tarball/'\
-          + '0.0.0.7',
+          + '0.0.0.8',
       author = 'Alex Hyer',
       author_email = 'theonehyer@gmail.com',
       license = 'GPL',
