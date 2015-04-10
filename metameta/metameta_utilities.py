@@ -19,7 +19,7 @@ output
 verify_fasta_fastq_sam
 '''
 
-__version__ = '0.0.0.4'
+__version__ = '0.0.0.5'
 
 import argparse
 import re
@@ -109,13 +109,18 @@ def entry_generator(in_file, file_type):
                     sys.exit(1)
             elif file_type == 'sam':
                 if not line.startswith('@'):
-                    entryParts.append(line)
+                    parts = line.split('\t')
+                    for part in parts:
+                        entryParts.append(part)
                     yield entryParts
                     entryParts = []
             else:
                 print(file_type + ' is not an acceptable file type.')
                 print('File type must be "fasta", "fastq", or "sam".')
                 sys.exit(1)
+        else: #yield entryParts at EOF so that last entry is not lost
+            if entryParts != []:
+                yield entryParts
 
 def output(message, program_verbosity, message_verbosity, log_file = None,\
            fatal = False):
@@ -199,7 +204,7 @@ def verify_fasta_fastq_sam(in_file):
         fileType = ''
         regexString = ''
         for line in in_handle:
-            if line.startswith('@HD') or line.startswith('@SN'):
+            if line.startswith(('@HD', '@RG', '@SQ', '@PG', '@CO', '@SN')):
                 fileType = 'sam'
                 regexString = r'^[!-?A-~]{1,255}\t'\
                               + r'([0-9]{1,4}|[0-5][0-9]{4}|'\

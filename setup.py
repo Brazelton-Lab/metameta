@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name = 'metameta',
-      version = '0.0.0.9',
+      version = '0.0.0.10',
       description = 'Toolset for analyzing'\
           + 'metatranscriptome data mapped onto metagenomic data',
       classifiers = [
