@@ -15,14 +15,16 @@ is meant to be imported by other scripts.
 
 Functions:
 entry_generator
+file_type
 output
-verify_fasta_fastq_sam
+verify_file
 '''
 
-__version__ = '0.0.0.5'
+__version__ = '0.0.0.6'
 
 import argparse
 import re
+import string
 import sys
 
 def entry_generator(in_file, file_type):
@@ -122,6 +124,40 @@ def entry_generator(in_file, file_type):
             if entryParts != []:
                 yield entryParts
 
+def file_type(in_file):
+    '''Reads the first line of the file and returns the file type
+
+    Input:
+            in_file: a FASTA, FASTQ, SAM, or BAM file
+
+    Output:
+            A tuple containing the input file name and the file type
+            (in_file, ['fasta', 'fastq', 'sam', 'bam'])
+    '''
+    
+    with open(in_file, 'rU+') as in_handle:
+        fileType = ''
+        # Credit for following five lines:
+        # http://code.activestate.com/recipes/
+        # 173220-test-if-a-file-or-string-is-text-or-binary/
+        charsToRemove = ''.join(map(chr, range(32 ,127)) + list('\n\r\t\b'))
+        translationMap = string.maketrans('', '')
+        firstBlock = in_handle.read(512)
+        translatedBlock = firstBlock.translate(translationMap, charsToRemove)
+        if float(len(translatedBlock))/float(len(firstBlock)) > 0.3:
+            fileType = 'bam'        
+        elif firstBlock.startswith(('@HD', '@RG', '@SQ', '@PG', '@CO',)):
+                fileType = 'sam'
+        elif firstBlock.startswith('>'):
+                fileType = 'fasta'
+        elif firstBlock.startswith('@'):
+            fileType = 'fastq'
+        else:
+            print(in_file + ' is not a properly formatted FASTA, '\
+                + 'FASTQ, SAM, or BAM file.')
+            sys.exit(1)
+        return (in_file, fileType)
+
 def output(message, program_verbosity, message_verbosity, log_file = None,\
            fatal = False):
     '''Writes a verbosity dependant message to log file or STDOUT
@@ -157,7 +193,7 @@ def output(message, program_verbosity, message_verbosity, log_file = None,\
             greather than program_verbosity.
 
         The message is written to STDOUT unless a log file is specified,
-    then it writes to the log file. The message is only written if the
+    then it is written to the log file. The message is only written if the
     message verbosity setting exceeds the verbosity setting of the
     progam. This offers a way to control the level of output such that
     a higher program verbosity results in more output. The fatality setting
@@ -169,12 +205,12 @@ def output(message, program_verbosity, message_verbosity, log_file = None,\
         if log_file == None:
             print(message)
         else:
-            with open(log_file, 'aU') as out_handle:
-                out_handle.write(message)
-    if fatal == True:
+            with open(log_file, 'a') as out_handle:
+                out_handle.write(message + '\n')
+    if fatal:
         sys.exit(1)
 
-def verify_fasta_fastq_sam(in_file):
+def verify_file(in_file):
     '''Checks a given file to see if it is a valid FASTA or FASTQ file
 
     Input:
@@ -184,7 +220,7 @@ def verify_fasta_fastq_sam(in_file):
     
     Output:
             A tuple with input file and file type
-            (input file, ['fasta', 'fastq', 'sam'])
+            (input file, ['fasta', 'fastq', 'sam', 'bam'])
 
         This function determines whether a file is a FASTA, FASTQ, or
     SAM file by the file's first few characters. It then uses a file
@@ -201,49 +237,44 @@ def verify_fasta_fastq_sam(in_file):
 
     with open(in_file, 'rU') as in_handle:
         wholeEntry = ''
-        fileType = ''
+        fileType = file_type(in_file)[1]
         regexString = ''
-        for line in in_handle:
-            if line.startswith(('@HD', '@RG', '@SQ', '@PG', '@CO', '@SN')):
-                fileType = 'sam'
-                regexString = r'^[!-?A-~]{1,255}\t'\
-                              + r'([0-9]{1,4}|[0-5][0-9]{4}|'\
-                              + r'[0-9]{1,4}|[1-5][0-9]{4}|'\
-                              + r'6[0-4][0-9]{3}|65[0-4][0-9]{2}|'\
-                              + r'655[0-2][0-9]|6553[0-7])\t'\
-                              + r'\*|[!-()+-<>-~][!-~]*\t'\
-                              + r'([0-9]{1,9}|1[0-9]{9}|2(0[0-9]{8}|'\
-                              + r'1([0-3][0-9]{7}|4([0-6][0-9]{6}|'\
-                              + r'7([0-3][0-9]{5}|4([0-7][0-9]{4}|'\
-                              + r'8([0-2][0-9]{3}|3([0-5][0-9]{2}|'\
-                              + r'6([0-3][0-9]|4[0-7])))))))))\t'\
-                              + r'([0-9]{1,2}|1[0-9]{2}|'\
-                              + r'2[0-4][0-9]|25[0-5])\t'\
-                              + r'\*|([0-9]+[MIDNSHPX=])+\t'\
-                              + r'\*|=|[!-()+-<>-~][!-~]*\t'\
-                              + r'([0-9]{1,9}|1[0-9]{9}|2(0[0-9]{8}|'\
-                              + r'1([0-3][0-9]{7}|4([0-6][0-9]{6}|'\
-                              + r'7([0-3][0-9]{5}|4([0-7][0-9]{4}|'\
-                              + r'8([0-2][0-9]{3}|3([0-5][0-9]{2}|'\
-                              + r'6([0-3][0-9]|4[0-7])))))))))\t'\
-                              + r'-?([0-9]{1,9}|1[0-9]{9}|2(0[0-9]{8}|'\
-                              + r'1([0-3][0-9]{7}|4([0-6][0-9]{6}|'\
-                              + r'7([0-3][0-9]{5}|4([0-7][0-9]{4}|'\
-                              + r'8([0-2][0-9]{3}|3([0-5][0-9]{2}|'\
-                              + r'6([0-3][0-9]|4[0-7])))))))))\t'\
-                              + r'\*|[A-Za-z=.]+\t'\
-                              + r'[!-~]+\n&'
-            elif line.startswith('>'):
-                fileType = 'fasta'
-                regexString = r'^>.+\n[ACGTURYKMSWBDHVNX]+\n$'
-            elif line.startswith('@'):
-                fileType = 'fastq'
-                regexString = r'^@.+\n[ACGTURYKMSWBDHVNX]+\n\+.*\n.+\n$'
-            else:
-                print(in_file + ' is not a properly formatted FASTA, '\
-                    + 'FASTQ, or SAM file.')
-                sys.exit(1)
-            break #Only read first line of file
+        if fileType == 'bam':
+            return (in_file, fileType) #Don't verify BAM files
+        elif fileType == 'sam':
+            regexString = r'^[!-?A-~]{1,255}\t'\
+                          + r'([0-9]{1,4}|[0-5][0-9]{4}|'\
+                          + r'[0-9]{1,4}|[1-5][0-9]{4}|'\
+                          + r'6[0-4][0-9]{3}|65[0-4][0-9]{2}|'\
+                          + r'655[0-2][0-9]|6553[0-7])\t'\
+                          + r'\*|[!-()+-<>-~][!-~]*\t'\
+                          + r'([0-9]{1,9}|1[0-9]{9}|2(0[0-9]{8}|'\
+                          + r'1([0-3][0-9]{7}|4([0-6][0-9]{6}|'\
+                          + r'7([0-3][0-9]{5}|4([0-7][0-9]{4}|'\
+                          + r'8([0-2][0-9]{3}|3([0-5][0-9]{2}|'\
+                          + r'6([0-3][0-9]|4[0-7])))))))))\t'\
+                          + r'([0-9]{1,2}|1[0-9]{2}|'\
+                          + r'2[0-4][0-9]|25[0-5])\t'\
+                          + r'\*|([0-9]+[MIDNSHPX=])+\t'\
+                          + r'\*|=|[!-()+-<>-~][!-~]*\t'\
+                          + r'([0-9]{1,9}|1[0-9]{9}|2(0[0-9]{8}|'\
+                          + r'1([0-3][0-9]{7}|4([0-6][0-9]{6}|'\
+                          + r'7([0-3][0-9]{5}|4([0-7][0-9]{4}|'\
+                          + r'8([0-2][0-9]{3}|3([0-5][0-9]{2}|'\
+                          + r'6([0-3][0-9]|4[0-7])))))))))\t'\
+                          + r'-?([0-9]{1,9}|1[0-9]{9}|2(0[0-9]{8}|'\
+                          + r'1([0-3][0-9]{7}|4([0-6][0-9]{6}|'\
+                          + r'7([0-3][0-9]{5}|4([0-7][0-9]{4}|'\
+                          + r'8([0-2][0-9]{3}|3([0-5][0-9]{2}|'\
+                          + r'6([0-3][0-9]|4[0-7])))))))))\t'\
+                          + r'\*|[A-Za-z=.]+\t'\
+                          + r'[!-~]+\n&'
+        elif fileType == 'fasta':
+            regexString = r'^>.+\n[ACGTURYKMSWBDHVNX]+\n$'
+        elif fileType == 'fastq':
+            regexString = r'^@.+\n[ACGTURYKMSWBDHVNX]+\n\+.*\n.+\n$'
+        elif fileType == 'bam':
+            return (in_file, fileType)
         for entry in entry_generator(in_file, fileType):
             for part in entry:
                 wholeEntry += part
@@ -290,8 +321,9 @@ if __name__ == '__main__':
 
     dict_functions = {
         'entry_generator': entry_generator,
+        'file_type': file_type,
         'output': output,
-        'verify_fasta_fastq_sam': verify_fasta_fastq_sam,
+        'verify_file': verify_file,
         }
     
     if args.version:

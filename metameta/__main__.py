@@ -6,15 +6,32 @@ Usage:
 
     metameta [--version] <tool> [arguments for tool]
 
-    metameta with no <tool> or arguments will give help on the package.
-    <tool> without any arguments will give the help for that tool.
+"metameta" without arguments will give help on the metameta package.
+"metameta <tool>" without any arguments will give the help for that tool.
+"--verify" in any tool verifies input files before use.
+
+Verbosity Settings (after <tool>):
+
+    -v: Fatal errors and important information printed
+    -vv: Detailed information on everything the program is doing,
+           best reserved for debugging purposes
+    Note: any numbers of "v"s may be specified but anything greater than
+          -vv will be identical to -vv. Fatal errors are printed be default.   
 
 Tools:
-metameta_utilities
-generate_fastr
+
+    generate_fastr
+
+            Generates a FASTR file containing per base read depth data
+            of a given FASTA or FASTQ file.
+
+    metameta_utilities:
+
+            A file containing a variety of modules useful to many scripts in
+            metameta.
 '''
 
-__version__ = '0.0.0.10'
+__version__ = '0.0.0.11'
 
 import argparse
 import subprocess
@@ -62,9 +79,6 @@ def main():
     elif args.arguments == [] and args.tool != None:
         script = 'metameta/' + args.tool + '.py'
         subprocess.call(['python', script])
-    else:
-        pass
-        #TODO: call other program with subprocess
     
 if __name__ == '__main__':
     main()

@@ -1,19 +1,20 @@
 ==========
-metameta
+**metameta**
 ==========
-Purpose
+
+*Purpose*
 -----------
 metameta is a toolset for analyzing metatranscriptome data that has been mapped to metagenomic data.
 
-Requirements
+*Requirements*
 ------------------
 - Python 3.4 or higher
-- Biopython
+-pysam 0.8.2.1 or higher
 
-Installation
+*Installation*
 ---------------
-python setup.py install
+''pip install metameta''
 
-Usage
+*Usage*
 ----------
 metameta <tool name> [arguments for tool]
