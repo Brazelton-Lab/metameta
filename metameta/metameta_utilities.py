@@ -6,26 +6,58 @@ Usage:
 
     metameta_utilities.py [--version] <functions>
 
-    <functions> will give the help for that each function
-    listed (multiple functions can be specified).
+<functions> will give the help for that each function
+listed (multiple functions can be specified).
 
 This file simply contains a number of generic bioinformatic
 related functions useful to many programs in metameta. It
 is meant to be imported by other scripts.
 
 Functions:
+create_fastr
 entry_generator
 file_type
 output
 verify_file
 '''
 
-__version__ = '0.0.0.6'
+__version__ = '0.0.0.7'
 
 import argparse
 import re
 import string
 import sys
+
+def create_fastr(file_name, headers, read_depth_sequences):
+    '''Generates a FASTR file given a list of headers and read depth sequences
+
+    Input:
+
+        file_name:
+                The name of the FASTR file to be written.
+
+        headers:
+                A list of headers to be written. headers and
+                read_depth_sequences entries are assumed to be in pairs.
+
+        read_depth_sequences:
+                A list of read depth sequence data to be written.
+
+    Output:
+
+            A FASTR file.
+
+        This function currently only writes non-compressed FASTR files.
+    '''
+    
+    with open(file_name, 'w') as out_handle:
+        for header, sequence in zip(headers, read_depth_sequences):
+            sequenceString = ''
+            for base in sequence:
+                sequenceString = sequenceString + str(base) + '-'
+            sequenceString = sequenceString[:-1]
+            entry = '+' + header + '\n' + sequenceString + '\n'
+            out_handle.write(entry)
 
 def entry_generator(in_file, file_type):
     '''Generates and returns entries for FASTA, FASTQ, and SAM files
@@ -48,25 +80,30 @@ def entry_generator(in_file, file_type):
     
     entryParts = []
     with open(in_file, 'rU') as in_handle:
+        startChar = ''
         for line in in_handle:
             if line == '\n':
                     print('There is an empy line in: ' + in_file)
                     sys.exit(1)
             entryPartsLength = len(entryParts)
-            if file_type == 'fasta':
+            if file_type == 'fasta' or file_type == 'fastr':
+                if file_type == 'fasta':
+                    startChar = '>'
+                else:
+                    startChar = '+'
                 if line.startswith('@'):
-                    print(in_file + ' may be a mixture of FASTA and FASTQ'\
+                    print(in_file + ' may be a mixture of FASTA/R and FASTQ'\
                           + ' files.')
                     print('Suspect line follows: ')
                     print(line)
                     sys.exit(1)
                 elif entryPartsLength == 0:
                     entryParts.append(line)
-                elif line.startswith('>') and entryPartsLength == 2:
+                elif line.startswith(startChar) and entryPartsLength == 2:
                     yield entryParts
                     entryParts = []
                     entryParts.append(line)
-                elif not line.startswith('>'):
+                elif not line.startswith(startChar):
                     try:
                         entryParts[1] = entryParts[1].replace('\n', line)
                     except IndexError:
@@ -132,7 +169,7 @@ def file_type(in_file):
 
     Output:
             A tuple containing the input file name and the file type
-            (in_file, ['fasta', 'fastq', 'sam', 'bam'])
+            (in_file, ['fasta', 'fastq', 'fastr', 'sam', 'bam'])
     '''
     
     with open(in_file, 'rU+') as in_handle:
@@ -147,14 +184,16 @@ def file_type(in_file):
         if float(len(translatedBlock))/float(len(firstBlock)) > 0.3:
             fileType = 'bam'        
         elif firstBlock.startswith(('@HD', '@RG', '@SQ', '@PG', '@CO',)):
-                fileType = 'sam'
+            fileType = 'sam'
         elif firstBlock.startswith('>'):
-                fileType = 'fasta'
+            fileType = 'fasta'
+        elif firstBlock.startswith('+'):
+            fileType = 'fastr'
         elif firstBlock.startswith('@'):
             fileType = 'fastq'
         else:
             print(in_file + ' is not a properly formatted FASTA, '\
-                + 'FASTQ, SAM, or BAM file.')
+                + ' FASTR, FASTQ, SAM, or BAM file.')
             sys.exit(1)
         return (in_file, fileType)
 
@@ -271,6 +310,8 @@ def verify_file(in_file):
                           + r'[!-~]+\n&'
         elif fileType == 'fasta':
             regexString = r'^>.+\n[ACGTURYKMSWBDHVNX]+\n$'
+        elif fileType == 'fastr':
+            regexString = r'^\+.+\n(\d-|\dx\d-)*\d\n$'
         elif fileType == 'fastq':
             regexString = r'^@.+\n[ACGTURYKMSWBDHVNX]+\n\+.*\n.+\n$'
         elif fileType == 'bam':
@@ -320,6 +361,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     dict_functions = {
+        'create_fastr': create_fastr,
         'entry_generator': entry_generator,
         'file_type': file_type,
         'output': output,

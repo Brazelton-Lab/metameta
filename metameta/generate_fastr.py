@@ -6,8 +6,8 @@ Usage:
 
     generate_fastr.py [--version] [--verify] <fastaq> <sam> <fastr>
 
-    generate_fastr produce a FASTR file containing per base per entry
-    read depth data given a FASTA or FASTQ file and a SAM file.
+generate_fastr produce a FASTR file containing per base per entry
+read depth data given a FASTA or FASTQ file and a SAM file.
 
 FASTR Format:
     The FASTR Format is identical to the FASTA Format except the
@@ -22,7 +22,7 @@ of only zeroes (no alignments anywhere in entry) thought there
 is nothing against doing this in general. Also, the FASTR file
 can list read depth as:
     16-16-16 or 3x16
-Which reduces total fiel size.
+The later is compressed and thus reduces total file size.
 
 FASTR Entry Example:
 
@@ -36,7 +36,7 @@ FASTR Entry Example:
     -15-15-15-15
 '''
 
-__version__ = '0.0.0.6'
+__version__ = '0.0.0.7'
 
 import argparse
 from metameta_utilities import *
@@ -216,4 +216,5 @@ if __name__ == '__main__':
                2, log_file = args.log_file)
     output('Exiting generate__fastr.py', args.verbosity, 1,\
            log_file = args.log_file)
+    
     sys.exit(0)
