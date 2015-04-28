@@ -68,7 +68,7 @@ def entry_generator(in_file, file_type):
                 The FASTA, FASTQ, or SAM file to generate entries from
 
         file_type:
-                ['fasta', 'fastq', 'sam']
+                ['gff', 'fasta', 'fastq', 'sam']
 
     Output:
             This function is a generator so it can repeatedly yield
@@ -153,9 +153,18 @@ def entry_generator(in_file, file_type):
                         entryParts.append(part)
                     yield entryParts
                     entryParts = []
+            elif file_type == 'gff3':
+                if line.startswith('>'):
+                    break
+                if not line.startswith('##'):
+                    parts = line.split('\t')
+                    for part in parts:
+                        entryParts.append(part)
+                    yield entryParts
+                    entryParts = []
             else:
                 print(file_type + ' is not an acceptable file type.')
-                print('File type must be "fasta", "fastq", or "sam".')
+                print('File type must be "gff", "fasta", "fastq", or "sam".')
                 sys.exit(1)
         else: #yield entryParts at EOF so that last entry is not lost
             if entryParts != []:
@@ -169,7 +178,7 @@ def file_type(in_file):
 
     Output:
             A tuple containing the input file name and the file type
-            (in_file, ['fasta', 'fastq', 'fastr', 'sam', 'bam'])
+            (in_file, ['bam', 'gff3', 'fasta', 'fastr', 'fastq', 'sam'])
     '''
     
     with open(in_file, 'rU+') as in_handle:
@@ -182,7 +191,7 @@ def file_type(in_file):
         firstBlock = in_handle.read(512)
         translatedBlock = firstBlock.translate(translationMap, charsToRemove)
         if float(len(translatedBlock))/float(len(firstBlock)) > 0.3:
-            fileType = 'bam'        
+            fileType = 'bam'
         elif firstBlock.startswith(('@HD', '@RG', '@SQ', '@PG', '@CO',)):
             fileType = 'sam'
         elif firstBlock.startswith('>'):
@@ -191,9 +200,11 @@ def file_type(in_file):
             fileType = 'fastr'
         elif firstBlock.startswith('@'):
             fileType = 'fastq'
+        elif firstBlock.startswith('##gff-version 3'):
+            fileType = 'gff3'
         else:
             print(in_file + ' is not a properly formatted FASTA, '\
-                + ' FASTR, FASTQ, SAM, or BAM file.')
+                + ' FASTR, FASTQ, SAM, BAM, or GFF3 file.')
             sys.exit(1)
         return (in_file, fileType)
 
@@ -255,11 +266,11 @@ def verify_file(in_file):
     Input:
 
         in_file:
-                The file to verify
+                The file to verify.
     
     Output:
-            A tuple with input file and file type
-            (input file, ['fasta', 'fastq', 'sam', 'bam'])
+            A tuple with input file and file type.
+            (input file, ['bam', 'fasta', 'fastr', 'fastq', 'gff3'])
 
         This function determines whether a file is a FASTA, FASTQ, or
     SAM file by the file's first few characters. It then uses a file
@@ -311,9 +322,12 @@ def verify_file(in_file):
         elif fileType == 'fasta':
             regexString = r'^>.+\n[ACGTURYKMSWBDHVNX]+\n$'
         elif fileType == 'fastr':
-            regexString = r'^\+.+\n(\d-|\dx\d-)*\d\n$'
+            regexString = r'^\+.+\n(\d+-|\d+x\d+-)*\d+\n$'
         elif fileType == 'fastq':
             regexString = r'^@.+\n[ACGTURYKMSWBDHVNX]+\n\+.*\n.+\n$'
+        elif fileType == 'gff3':
+            regexString = r'^[a-zA-Z0-9.:^*$@!+_?-|]+\t.+\t.+\t\d+\t\d+\t'\
+                          + '(\.|\d+)+\t(\+|\-|\?)\t[0-2]\t.+product.+\n$'
         elif fileType == 'bam':
             return (in_file, fileType)
         for entry in entry_generator(in_file, fileType):
@@ -321,7 +335,7 @@ def verify_file(in_file):
                 wholeEntry += part
             matches = re.findall(regexString, wholeEntry)
             if len(matches) != 1:
-                if fileType == 'sam':
+                if fileType == 'sam' or fileType == 'gff3':
                     splitRegex = regexString[1:-1].split(r'\t')
                     splitEntry = wholeEntry.split('\t')
                 else:

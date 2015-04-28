@@ -20,7 +20,17 @@ Verbosity Settings (after <tool>):
 
 Tools:
 
-    generate_fastr
+    annotate_clusters:
+
+            Compares a statistics file from filter_fastr to a GFF file
+            to annotate clusters.
+
+    filter_fastr:
+
+            Isolates clusters from a FASTR file, seperates them by size,
+            and outputs a statistics file.
+
+    generate_fastr:
 
             Generates a FASTR file containing per base read depth data
             of a given FASTA or FASTQ file.
@@ -31,7 +41,7 @@ Tools:
             metameta.
 '''
 
-__version__ = '0.0.0.11'
+__version__ = '0.0.0.13'
 
 import argparse
 import subprocess
@@ -41,8 +51,10 @@ def tool_check(desired_tool):
     '''Checks if given tool is valid and prints a list of toosl if not'''
     
     tools = [
-        'metameta_utilities',
-        'generate_fastr'
+        'annotate_clusters',
+        'filter_fastr',
+        'generate_fastr',
+        'metameta_utilities'
         ]
     for tool in tools:
         if desired_tool == tool:

@@ -4,7 +4,8 @@
 
 Usage:
 
-    generate_fastr.py [--version] [--verify] <fastaq> <sam> <fastr>
+    generate_fastr.py [--log_file] [--verbose] [--version] [--verify]
+                      <fastaq> <sam> <fastr>
 
 generate_fastr produce a FASTR file containing per base per entry
 read depth data given a FASTA or FASTQ file and a SAM file.

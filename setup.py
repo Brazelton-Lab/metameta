@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name = 'metameta',
-      version = '0.0.0.12',
+      version = '0.0.0.13',
       description = 'Toolset for analyzing'\
           + 'metatranscriptome data mapped onto metagenomic data',
       classifiers = [
@@ -17,9 +17,9 @@ setup(name = 'metameta',
           ],
       keywords = 'bioinformatics metadata metagenome metatranscriptome'\
           + 'short reads mapping alignment',
-      url = 'https://github.com/Brazelton-Lab/metameta',
+      url = 'https://github.com/Brazelton-Lab/metameta/',
       download_url = 'https://github.com/Brazelton-Lab/metameta/tarball/'\
-          + '0.0.0.12',
+          + '0.0.0.13',
       author = 'Alex Hyer',
       author_email = 'theonehyer@gmail.com',
       license = 'GPL',
@@ -29,7 +29,8 @@ setup(name = 'metameta',
       test_suite = 'nose.collector',
       tests_require = ['nose'],
       install_requires = [
-          'pysam'
+          'pysam',
+          'statistics'
           ],
       entry_points = {
         'console_scripts':['metameta = metameta.__main__:main']

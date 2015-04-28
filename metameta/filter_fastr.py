@@ -4,12 +4,13 @@
 
 Usage:
 
-    filter_fastr.py [--version] [--verify] [--min_length] [--max_length]
-                    <fastr>
+    filter_fastr.py [--log_file] [--verbose] [--version] [--verify]
+                    [--min_length] [--max_length] <fastr>
 
-    filter_fastr.py reads a fastr file and seperates entries by size: entries
-below a certain length, entries above a certain length, and all entries
-in-betweem the specified lengths. Each respective category is written as:
+    filter_fastr.py reads a fastr file, isolates clusters, and seperates
+clusters by size: clusters below a certain length, clusters above a 
+certain length, and all clusters in-between the specified lengths.
+Each respective category is written as:
 
     <fastr>.short.fastr
     <fastr>.long.fastr
@@ -20,9 +21,36 @@ Additionally, statistical information on each category is written in:
     <fastr>.short.stats.txt
     <fastr>.long.stats.txt
     <fastr>.ideal.stats.txt
+
+    A cluster is defined as all consecutive bases containing non-zero read
+depth data flanked by bases containing read depths of zero or the end of
+the entry. Two examples follow:
+
+        200x0-3x10-4x11-7x18-50x15
+
+The above entry has a single cluster consisting of the read depth data:
+    3x10-4x11-7x18-50x15
+This is one cluster because it is flanked by bases of read depth zero
+on one end and the end of the entry on the other.
+
+        150x0-10x3-20x6-250x7-8-9-10x0-50x1-20x2-30x3-12x7-80x0
+
+The above entry has two clusters:
+    10x3-20x6-250x7-8-9
+    50x1-20x2-30x3-12x7
+Both clusters are flanked by bases of read depth zero. Thus this
+function reports two reads with the same heading since they are from
+the same FASTR heading.
+
+Each row in the stats file is a row with four following tab-delimited columns:
+
+Header
+Cluster Start
+Cluster End
+Average Read Depth
 '''
 
-__version__ = '0.0.0.1'
+__version__ = '0.0.0.2'
 
 import argparse
 from metameta_utilities import *
@@ -163,26 +191,6 @@ def isolate_clusters(fastr_file):
                 given in the FASTR format (non-compressed). Type
                 "metameta generate-fastr" with no arguments for more
                 information on the FASTR file type.
-
-        A cluster is defined as all consecutive bases containing non-zero read
-    depth data flanked by bases containing read depths of zero or the end of
-    the entry. Two examples follow:
-
-        200x0-3x10-4x11-7x18-50x15
-
-        The above entry has a single cluster consisting of the read depth data:
-            3x10-4x11-7x18-50x15
-        This is one cluster because it is flanked by bases of read depth zero
-        on one end and the end of the entry on the other.
-
-        150x0-10x3-20x6-250x7-8-9-10x0-50x1-20x2-30x3-12x7-80x0
-
-        The above entry has two clusters:
-            10x3-20x6-250x7-8-9
-            50x1-20x2-30x3-12x7
-        Both clusters are flanked by bases of read depth zero. Thus this
-        function reports two reads with the same heading since they are from
-        the same FASTR heading.
     '''
     clusters = []
     localCluster = []
@@ -270,6 +278,13 @@ if __name__ == '__main__':
                         type = int,
                         default = None,
                         help = 'Maximum number of consecutive hits to keep')
+    parser.add_argument('-l', '--log_file',
+                        default = None,
+                        help = 'log file to print all messages to')
+    parser.add_argument('-v', '--verbosity',
+                        action = 'count',
+                        default = 0,
+                        help = 'increase output verbosity')
     parser.add_argument('--verify',
                         action = 'store_true',
                         help = 'verify input files before use')
