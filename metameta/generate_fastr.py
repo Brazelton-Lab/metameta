@@ -15,11 +15,11 @@ FASTR Format:
 bases are replaced by numbers representing the read depth of the
 corresponding bases in the given FASTA file. Since read depth
 numbers may contain more than one digit (e.g. a read depth of
-10) so each number is seperated by a hyphen. Additionally, the
+10) so each number is separated by a hyphen. Additionally, the
 ">" at the beginning of each entry is replaced by a "+".
     The FASTR file also features file size reducing features.
 First, this script does not include entries with read-depths
-of only zeroes (no alignments anywhere in entry) thought there
+of only zeroes (no alignments anywhere in entry) though there
 is nothing against doing this in general. Also, the FASTR file
 can list read depth as:
     16-16-16 or 3x16
@@ -37,13 +37,97 @@ FASTR Entry Example:
     -15-15-15-15
 '''
 
-__version__ = '0.0.0.7'
+__version__ = '0.0.0.9'
 
 import argparse
 from metameta_utilities import *
 import pysam
-import re
 import sys
+
+def compress_fastr(sequence):
+    '''Compresses a FASTR sequence
+
+    Input:
+
+        sequence:
+                The FASTR sequence to compress as a list.
+
+    Output:
+            Returns the compressed FASTR sequence as a string.
+
+        compress_fastr compares each read depth to the previous
+    read depth to identigy regions of repeats and rewrites them
+    as a multiplication. For example the following FASTR sequence:
+
+    3-3-3-3-3-5-5-9-9-9-9-9-9
+
+    is compressed to:
+
+    5x3-2x5-6x9
+    '''
+    
+    compressedSequence = ''
+    lastRead = None
+    readRepeats = 0
+    count = 0
+    for read in sequence:
+        if read == lastRead:
+            readRepeats += 1
+        else:
+            if readRepeats != 0:
+                compressedSequence += str(readRepeats + 1) + 'x' +\
+                                 str(lastRead) + '-'
+                readRepeats = 0
+            elif count != 0:
+                compressedSequence += str(lastRead) + '-'
+            lastRead = read
+        count += 1
+        if count == len(sequenceDepth):
+            if readRepeats != 0:
+                compressedSequence += str(readRepeats + 1) + 'x' +\
+                                 str(lastRead) + '-'
+            compressedSequence = compressedSequence[:-1]
+    return compressedSequence
+
+def decompress_fastr(sequence):
+    '''Decompresses a FASTR sequence
+
+    Input:
+
+        sequence:
+                The FASTR sequence to decompress as a string.
+
+    Output:
+            Returns the decompressed FASTR sequence as a string.
+
+        decompress_fastr splits a FASTR sequences by hyphens and
+    then by "x" if possible. If split by "x" For example the following
+    FASTR sequence:
+
+    5x3-2x5-6x9
+
+    is decompressed to:
+
+    3-3-3-3-3-5-5-9-9-9-9-9-9
+    '''
+
+    depthSequence = sequence.split('-')
+    decompressedSequence = []
+    for base in depthSequence:
+        try:
+            int(hit)
+            decompressedSequence.append(int(hit))
+        except ValueError:
+            sep = hit.split('x')
+            sep[1] = sep[1].replace('\n', '')
+            for c in range(int(sep[0])):
+                decompressedSequence.append(int(sep[1]))
+    returnSequence = ''
+    for base in decompressedSequence:
+        returnSequence = returnSequence + str(base) + '-'
+    returnSequence = returnSequence[:-1] # Remove trailing hyphen
+    return returnSequence
+    
 
 def generate_fastr(fasta_q_file, sam_bam_file,\
                    fasta_q_file_type, sam_bam_file_type, fastr_file):
@@ -65,6 +149,9 @@ def generate_fastr(fasta_q_file, sam_bam_file,\
         fasta_q_file_type:
                 ['fasta', 'fastq']
 
+        sam_bam_file_type:
+                ['sam', 'bam']
+
     Output:
             A FASTR file containing per base read depth data for the given
             FASTA/Q file.
@@ -76,7 +163,7 @@ def generate_fastr(fasta_q_file, sam_bam_file,\
     base's read depth is analyzed and corrected, the read depth list is
     compressed. If the compressed list only contains "0"s for read depths,
     then it is not written to the FASTR file, otherwise a FASTR entry is
-    generated adn writtein to the FASTR file.
+    generated and writtein to the FASTR file.
     '''
 
     if fasta_q_file_type != 'fasta' and fasta_q_file_type != 'fastq':
@@ -99,14 +186,14 @@ def generate_fastr(fasta_q_file, sam_bam_file,\
                   + 'a SAM file.'
         output(message, args.verbosity, 0, log_file = args.log_file,\
                fatal = True)
+    elif sam_bam_file_type != 'bam':
+        message = 'Must specify if alignment file is a SAM or BAM file.'
+        output(message, args.verbosity, 0, log_file = args.log_file,\
+               fatal = True)
     header = ''
     sequenceLength = 0
     sequenceDepth = []
     readType = ''
-    if sam_bam_file_type != 'bam':
-        message = 'Must specify if alignment file is a SAM or BAM file.'
-        output(message, args.verbosity, 0, log_file = args.log_file,\
-               fatal = True)
     alignmentFile = pysam.Samfile(sam_bam_file, 'rb')
     for entry in entry_generator(fasta_q_file, fasta_q_file_type):
         header = entry[0][1:-1]
@@ -119,44 +206,63 @@ def generate_fastr(fasta_q_file, sam_bam_file,\
             basePosition = pileupColumn.pos
             baseReadDepth = pileupColumn.n
             sequenceDepth[basePosition] = baseReadDepth
-        with open(fastr_file, 'a') as out_handle:
-            fastrSequence = ''
-            lastRead = ''
-            readRepeats = 0
-            count = 0
-            for read in sequenceDepth:
-                if read == lastRead:
-                    readRepeats += 1
-                else:
-                    if readRepeats != 0:
-                        fastrSequence += str(readRepeats + 1) + 'x' +\
-                                         str(lastRead) + '-'
-                        readRepeats = 0
-                    else:
-                        if count != 0:
-                            fastrSequence += str(lastRead) + '-'
-                    lastRead = read
-                count += 1
-                if count == len(sequenceDepth):
-                    if readRepeats != 0:
-                        fastrSequence += str(readRepeats + 1) + 'x' +\
-                                         str(lastRead) + '-'
-                    fastrSequence = fastrSequence[:-1] + '\n'
-                    sections = len(fastrSequence.split('-'))
-                    if sections > 1:
-                        header = '+' + sequenceId + '\n'
-                        message = 'Appending read depth for ' + header[1:-1] +\
-                                  ' to ' + fastr_file
-                        output(message, args.verbosity, 2,\
-                               log_file = args.log_file)
-                        with open(fastr_file, 'a') as out_handle:
-                            out_handle.write(header + fastrSequence)
-                    else:
-                        message = header + ' has a read depth of zero for '+\
-                                  'each base. Not appending to ' + fastr_file
-                        output(message, args.verbosity, 2,\
-                               log_file = args.log_file)
+        output('Compressing sequence: ' sequenceDepth, args.verbosity, 2,\
+               log_file = args.log_file)
+        fastrSequence = compress_fastr(sequenceDepth)
+        output('Compressed sequence: ' fastrSequence, args.verbosity, 2,\
+               log_file = args.log_file)
+        sections = len(fastrSequence.split('-'))
+        if sections > 1:
+            message = 'Appending read depth for ' + header[1:-1] +\
+                      ' to ' + fastr_file
+            output(message, args.verbosity, 2,\
+                   log_file = args.log_file)
+            write_fastr(header, fastrSequence)
+        else:
+            message = header + ' has a read depth of zero for '+\
+                          'each base. Not appending to ' + fastr_file
+                output(message, args.verbosity, 2,\
+                       log_file = args.log_file)
     alignmentFile.close()
+
+    def write_fastr(sequence_ids, sequences, fastr_file, write_type = 'a'):
+        '''Formats information for FASTR entries and writes them to a file
+
+        Input:
+
+            sequence_id:
+                    The ID of the entry to be written as a string for single
+                    entries or a list of strings for multiple entries.
+
+            sequence:
+                    The sequence to be written as a string for single
+                    entries or a list of strings for multiple entries.
+
+            fastr_file:
+                    The file for the entry to be written to.
+
+            write_type:
+                    How the entry should be written to the fastr_file, e.g.
+                    "a" is for append and "w" is for write. Default is "a".
+
+        Output:
+                An entry is written to the fastr_file.
+
+            For more information on FASTR file entries, type
+        "metameta generate_fastr.py" with no further arguments.
+        '''
+        
+        with open(fastr_file, write_type) as out_handle:
+            # If the input is not a list, convert to a list
+            try:
+                assert type(sequence_id) == list
+            except AssertionError:
+                sequence_ids = [sequence_ids]
+                sequences = [sequences]
+            for sequence_id, sequence in zip(sequence_ids, sequences):
+                header = '+' + sequence_id + '\n'
+                fastrSequence = sequence + '\n'
+                out_handle.write(header + fastrSequence)
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = __doc__,
@@ -203,12 +309,12 @@ if __name__ == '__main__':
         output(message, args.verbosity, 0, fatal = True)
     else:
         if args.verify:
-            output('Verifying: ' + args.fastaq, args.verbosity, 1,\
+            output('Verifying: ' + args.fastaq[0], args.verbosity, 1,\
                    log_file = args.log_file)
-            verify_file(args.fastaq)
-            output('Verifying: ' + args.bsam, args.verbosity, 1,\
+            verify_file(args.fastaq[0])
+            output('Verifying: ' + args.bsam[0], args.verbosity, 1,\
                    log_file = args.log_file)
-            verify_file(args.bsam)
+            verify_file(args.bsam[0])
         output('Generating FASTR file: ' + args.fastr, args.verbosity, 1,\
                log_file = args.log_file)
         generate_fastr(args.fastaq[0], args.bsam[0],\

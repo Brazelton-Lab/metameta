@@ -27,13 +27,43 @@ GFF End
 Gene
 '''
 
-__version__ = '0.0.0.1'
+__version__ = '0.0.0.2'
 
 from metameta_utilities import *
 import re
 
+def gff_dict(gff_file):
+    '''Reads a GFF file of important information for annotation purposes
+
+    Input:
+
+        gff_file:
+                The GFF3 file to be read.
+
+    Output:
+
+            A dictionary where each key is a contig header. Each value is a
+            list of all the annotations for that contig. Each item in the list
+            is a tuple containing the gene name, the start of the gene, and
+            the end of the gene.
+    '''
+    
+    annotations = {}
+    for entry in entry_generator(gff_file, 'gff3'):
+        start = int(entry[3]) - 1
+        end = int(entry[4]) - 1
+        geneLocation = entry[-1][:-1]
+        header = entry[0]
+        gene = re.split('(product=)|(rpt_family=)', geneLocation)[-1]
+        annotation = (gene, start, end)
+        if header in annotations:
+            annotations[header].append(annotation)
+        else:
+            annotations[header] = [annotation]
+    return annotations
+
 def same_gene(clusterStart, clusterEnd, gffStart, gffEnd):
-    '''determines if a cluster and annotation on a contig cover the same gene
+    '''Determines if a cluster and annotation on a contig cover the same gene
 
     Input:
 
@@ -61,6 +91,7 @@ def same_gene(clusterStart, clusterEnd, gffStart, gffEnd):
     # GFF encompasses Cluster
     elif clusterStart >= gffStart and clusterEnd <= gffEnd:
         sameGene = True
+    # GFF overlaps clusters by at least 50%
     else:
         overlap = 0
         if clusterEnd > gffEnd and clusterStart > gffStart:
@@ -73,16 +104,16 @@ def same_gene(clusterStart, clusterEnd, gffStart, gffEnd):
     return sameGene
 
 def read_stats(stats_file):
-    '''generator for a stats file
+    '''Generator for a stats file (or any tab-delimted file)
 
     Input:
 
         stats_file:
-                The stats file to be read
+                The stats file to be read.
 
     Output:
 
-            A tab-delimited list of each line of the stats file
+            A tab-delimited list of each line of the stats file.
     '''
     
     with open(stats_file, 'rU') as in_handle:
@@ -91,15 +122,11 @@ def read_stats(stats_file):
             yield sepLine
 
 def main(stats_file, gff_file):
-    annotations = {}
-    for entry in entry_generator(gff_file, 'gff3'):
-        header = entry[0]
-        start = int(entry[3]) - 1
-        end = int(entry[4]) - 1
-        geneLocation = entry[-1][:-1]
-        gene = re.split('(product=)|(rpt_family=)', geneLocation)[-1]
-        annotations[header] = (gene, start, end)
-    with open(stats_file.replace('.txt', '.ann'), 'w') as out_handle:
+    output('Generating dicitonary from ' + gff_file, args.verbosity, 1,\
+           log_file = args.log_file)
+    annotations = gff_dict(gff_file)
+    fileName = stats_file.replace('.txt', '.ann')
+    with open(fileName, 'w') as out_handle:
         for line in read_stats(stats_file):
             if line[0] == 'Header':
                 firstLine = ''
@@ -108,19 +135,28 @@ def main(stats_file, gff_file):
                 firstLine = firstLine + 'GFF Start\tGFF End\tGene\n'
                 out_handle.write(firstLine)
             else:
-                geneAnnotation = '\t\t'
-                if line[0] in annotations:
-                    gffData = annotations[line[0]]
-                    gffStart = gffData[1]
-                    gffEnd = gffData[2]
-                    clusterStart = int(line[1])
-                    clusterEnd = int(line[2])
-                    sameGene = same_gene(clusterStart, clusterEnd,\
-                                         gffStart, gffEnd)
-                    if sameGene:
-                        geneAnnotation = str(gffStart)\
-                                         + '\t' + str(gffEnd) + '\t' +\
-                                         gffData[0]
+                geneAnnotation = ''
+                annHeader = line[0]
+                if annHeader in annotations:
+                    for gffData in annotations[annHeader]:
+                        gffStart = gffData[1]
+                        gffEnd = gffData[2]
+                        clusterStart = int(line[1])
+                        clusterEnd = int(line[2])
+                        message = 'Determining if ' + gffData[0] +\
+                                  ' annotates the same region as the'\
+                                  + ' cluster ' + annHeader
+                        output(message, args.verbosity, 2,\
+                               log_file = args.log_file)
+                        sameGene = same_gene(clusterStart, clusterEnd,\
+                                             gffStart, gffEnd)
+                        if sameGene:
+                            message = 'Appending gene annotation to'\
+                                      + ' cluster'
+                            output(message ,args.verbosity, 2,\
+                                   log_file = args.log_file)
+                            geneAnnotation = str(gffStart) + '\t' + \
+                                             str(gffEnd) + '\t' + gffData[0]
                 toWrite = ''
                 for item in line:
                     toWrite = toWrite + item + '\t'
@@ -164,7 +200,11 @@ if __name__ == '__main__':
         output(message, args.verbosity, 0, fatal = True)
     else:
         if args.verify:
+            output('Verifying ' + args.gff[0], args.verbosity, 1,\
+                   log_file = args.log_file)
             verify_file(args.gff[0])
         main(args.stats, args.gff[0])
+    output('Exiting annotate_clusters.py', args.verbosity, 1,\
+           log_file = args.log_file)
 
     sys.exit(0)

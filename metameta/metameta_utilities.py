@@ -11,53 +11,23 @@ listed (multiple functions can be specified).
 
 This file simply contains a number of generic bioinformatic
 related functions useful to many programs in metameta. It
-is meant to be imported by other scripts.
+is meant to be imported by other scripts. Functions that
+perform tasks represntative of another tool will be contained
+in that tool, e.g. all functions for writing FASTR files
+are in generate_fastr.py
 
 Functions:
-create_fastr
 entry_generator
 file_type
 output
 verify_file
 '''
 
-__version__ = '0.0.0.7'
+__version__ = '0.0.0.8'
 
 import argparse
 import re
-import string
 import sys
-
-def create_fastr(file_name, headers, read_depth_sequences):
-    '''Generates a FASTR file given a list of headers and read depth sequences
-
-    Input:
-
-        file_name:
-                The name of the FASTR file to be written.
-
-        headers:
-                A list of headers to be written. headers and
-                read_depth_sequences entries are assumed to be in pairs.
-
-        read_depth_sequences:
-                A list of read depth sequence data to be written.
-
-    Output:
-
-            A FASTR file.
-
-        This function currently only writes non-compressed FASTR files.
-    '''
-    
-    with open(file_name, 'w') as out_handle:
-        for header, sequence in zip(headers, read_depth_sequences):
-            sequenceString = ''
-            for base in sequence:
-                sequenceString = sequenceString + str(base) + '-'
-            sequenceString = sequenceString[:-1]
-            entry = '+' + header + '\n' + sequenceString + '\n'
-            out_handle.write(entry)
 
 def entry_generator(in_file, file_type):
     '''Generates and returns entries for FASTA, FASTQ, and SAM files
@@ -77,7 +47,7 @@ def entry_generator(in_file, file_type):
             have a single item, FASTA files have two, and FASTQ files
             have four.
     '''
-    
+
     entryParts = []
     with open(in_file, 'rU') as in_handle:
         startChar = ''
@@ -375,7 +345,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     dict_functions = {
-        'create_fastr': create_fastr,
         'entry_generator': entry_generator,
         'file_type': file_type,
         'output': output,
