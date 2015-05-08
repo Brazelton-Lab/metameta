@@ -50,13 +50,13 @@ Cluster End
 Average Read Depth
 '''
 
-__version__ = '0.0.0.2'
+__version__ = '0.0.0.3'
 
 import argparse
+from generate_fastr import compress_fastr, decompress_fastr, write_fastr
 from metameta_utilities import *
-import statistics
 
-def filter_by_size(unfiltered_list, tuplePos = None, min_length = None,\
+def filter_by_size(unfiltered_list, tuple_pos = None, min_length = None,\
                    max_length = None):
     '''Filters a list of lists, or tuples, by size
 
@@ -98,9 +98,9 @@ def filter_by_size(unfiltered_list, tuplePos = None, min_length = None,\
     idealLists = []
     longLists = []
     listsToFilter = []
-    if tuplePos != None:
+    if tuple_pos != None:
         for subTuple in unfiltered_list:
-            listsToFilter.append(subTuple[tuplePos])
+            listsToFilter.append(subTuple[tuple_pos])
     else:
         for subList in unfiltered_list:
             listsToFilter.append(subList)
@@ -108,15 +108,28 @@ def filter_by_size(unfiltered_list, tuplePos = None, min_length = None,\
     for subList in listsToFilter:
         subLength = len(subList)
         if min_length != None and subLength < min_length:
+            message = str(subList) + ' in '+ str(unfiltered_list) + \
+                      ' is less than the minimum length'\
+                      + str(min_length)
+            output(message, args.verbosity, 2, log_file = args.log_file)
             shortLists.append(unfiltered_list[position])
         elif max_length != None and subLength > max_length:
+            message = str(subList) + ' in '+ str(unfiltered_list) + \
+                      ' is greater than the maximum length'\
+                      + str(max_length)
+            output(message, args.verbosity, 2, log_file = args.log_file)
             longLists.append(unfiltered_list[position])
         else:
+            message = str(subList) + ' in '+ str(unfiltered_list) + \
+                      ' is within the length parameters: '\
+                      + 'minimum length = ' + str(min_length) + \
+                      ' and maximum length = ' + str(max_length)
+            output(message, args.verbosity, 2, log_file = args.log_file)
             idealLists.append(unfiltered_list[position])
         position += 1
     return (shortLists, idealLists, longLists)
 
-def get_averages(in_list, tuplePos = None):
+def get_averages(in_list, tuple_pos = None):
     '''Gets the averages of a list of lists
 
     Input:
@@ -125,7 +138,7 @@ def get_averages(in_list, tuplePos = None):
                 A list of lists or tuples to get the averages of.
 
         tuplePos:
-                If in_list is a lsit of tuples, this argument specifies
+                If in_list is a list of tuples, this argument specifies
                 which position of the tuple contains the list to be averaged.
 
     Output:
@@ -137,9 +150,9 @@ def get_averages(in_list, tuplePos = None):
     
     averagesList = []
     listsToAverage = []
-    if tuplePos != None:
+    if tuple_pos != None:
         for subTuple in in_list:
-            listsToAverage.append(subTuple[tuplePos])
+            listsToAverage.append(subTuple[tuple_pos])
     else:
         for subList in in_list:
             listsToAverage.append(subList)
@@ -147,11 +160,11 @@ def get_averages(in_list, tuplePos = None):
     for subList in listsToAverage:
         temporaryData = []
         average = float(sum(subList))/float(len(subList))
-        count = 0
-        if tuplePos != None:
+        # Reconstruct original tuple with list average replacing the list
+        if tuple_pos != None:
             count = 0
             for item in in_list[position]:
-                if count != tuplePos:
+                if count != tuple_pos:
                     temporaryData.append(item)
                 else:
                     temporaryData.append(average)
@@ -192,35 +205,32 @@ def isolate_clusters(fastr_file):
                 "metameta generate-fastr" with no arguments for more
                 information on the FASTR file type.
     '''
+    
     clusters = []
     localCluster = []
     for entry in entry_generator(fastr_file, 'fastr'):
         header = entry[0][1:-1]
-        hitSequence = entry[1].split('-')
-        realSequence = []
-        for hit in hitSequence:
-            try:
-                int(hit)
-                realSequence.append(int(hit))
-            except ValueError:
-                sep = hit.split('x')
-                sep[1] = sep[1].replace('\n', '')
-                for c in range(int(sep[0])):
-                    realSequence.append(int(sep[1]))
-        maxLength = len(realSequence) - 1
+        hitSequence = decompress_fastr(entry[1]).split('-'))
+        maxLength = len(hitSequence) - 1
         basePosition = 0
         clusterStart = 0
         clusterEnd = 0
-        for base in realSequence:
+        for base in hitSequence:
+            # Start cluster
             if base != 0 and basePosition != maxLength:
                 if localCluster == []:
                     clusterStart = basePosition
                 localCluster.append(base)
+            # End of cluster if not end of entry
             elif base == 0 and localCluster != []:
                 clusterEnd = basePosition - 1
                 clusterData = (header, clusterStart, clusterEnd, localCluster)
                 clusters.append(clusterData)
+                clusterLength = str(len(clusterEnd - clusterStart))
+                output(clusterLength + ' base cluster isolated', args.verbosity, 2,\
+                       log_file = args.log_file)
                 localCluster = []
+            # End cluster at end of entry
             elif base != 0 and basePosition == maxLength:
                 if localCluster == []:
                     clusterStart = basePosition
@@ -228,12 +238,17 @@ def isolate_clusters(fastr_file):
                 localCluster.append(base)
                 clusterData = (header, clusterStart, clusterEnd, localCluster)
                 clusters.append(clusterData)
+                clusterLength = str(len(clusterEnd - clusterStart))
+                output(clusterLength + ' base cluster isolated', args.verbosity, 2,\
+                       log_file = args.log_file)
                 localCluster = []
             basePosition += 1
     return clusters
 
 def main(in_file, min_length = None, max_length = None):
+    output('Isolating Clusters', args.verbosity, 1, log_file = args.log_file)
     rawClusters = isolate_clusters(in_file)
+    output('Sorting clusters by size', args.verbosity, 1, log_file = args.log_file)
     shortClusters, idealClusters, longClusters =\
                    filter_by_size(rawClusters, tuplePos = 3,\
                                   min_length = min_length,\
@@ -242,14 +257,21 @@ def main(in_file, min_length = None, max_length = None):
                   (longClusters, 'long'))
     for category in categories:
         headers = []
-        read_depth_sequences = []
+        readDepthSequences = []
         for cluster in category[0]:
             headers.append(cluster[0])
             read_depth_sequences.append(cluster[3])
         file_name = in_file.replace('fastr', category[1] + '.fastr')
-        create_fastr(file_name, headers, read_depth_sequences)
+        location = 0
+        for depthSequence in readDepthSequences:
+            depthSequence = compress_fastr(depthSequence)
+            readDepthSequence[location] = depthSequence
+            location += 1
+        output('Writing ' + file_name, args.verbosity, 1, log_file = args.log_file)
+        write_fastr(headers, readDepthSequences, file_name)
         clusterDepthAverages = get_averages(category[0], tuplePos = 3)
         out_file = file_name.replace('fastr', 'stats.txt')
+        output('Writing ' + out_file, args.verbosity, 1, log_file = args.log_file)
         with open(out_file, 'w') as out_handle:
             headerRow = 'Header\tCluster Start\tCluster End\t'\
                         + 'Average Read Depth'
@@ -299,7 +321,11 @@ if __name__ == '__main__':
         print(__doc__)
     else:
         if args.verify:
+            output('Verifying ' + args.fastr[0], args.verbosity, 1,\
+                   log_file = args.log_file)
             verify_file(args.fastr[0])
         main(args.fastr[0], args.min_length, args.max_length)
+    output('Exiting filter__fastr.py', args.verbosity, 1,\
+           log_file = args.log_file)
         
     sys.exit(0)

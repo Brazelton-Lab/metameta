@@ -4,7 +4,7 @@
 
 Usage:
 
-    metameta [--version] <tool> [arguments for tool]
+    metameta [--version] [--verify] <tool> [arguments for tool]
 
 "metameta" without arguments will give help on the metameta package.
 "metameta <tool>" without any arguments will give the help for that tool.
@@ -14,9 +14,9 @@ Verbosity Settings (after <tool>):
 
     -v: Fatal errors and important information printed
     -vv: Detailed information on everything the program is doing,
-           best reserved for debugging purposes
+         best reserved for debugging purposes
     Note: any numbers of "v"s may be specified but anything greater than
-          -vv will be identical to -vv. Fatal errors are printed be default.   
+          -vv will be identical to -vv. Fatal errors are printed by default.   
 
 Tools:
 
@@ -41,7 +41,7 @@ Tools:
             metameta.
 '''
 
-__version__ = '0.0.0.13'
+__version__ = '0.0.0.14'
 
 import argparse
 import subprocess
