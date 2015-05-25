@@ -4,11 +4,13 @@
 
 Usage:
 
-    metameta [--version] [--verify] <tool> [arguments for tool]
+    metameta <tool> [arguments for tool]
 
 "metameta" without arguments will give help on the metameta package.
+"metameta --version" prints package version.
 "metameta <tool>" without any arguments will give the help for that tool.
 "--verify" in any tool verifies input files before use.
+"--log_file <log file>" in any tool will redirect output to the log file.
 
 Verbosity Settings (after <tool>):
 
@@ -24,6 +26,11 @@ Tools:
 
             Compares a statistics file from filter_fastr to a GFF file
             to annotate clusters.
+
+    create_table:
+
+            Takes multiple annotated stats files and compiles them into
+            a table.
 
     filter_fastr:
 
@@ -41,7 +48,7 @@ Tools:
             metameta.
 '''
 
-__version__ = '0.0.0.14'
+__version__ = '0.0.0.17'
 
 import argparse
 import subprocess
@@ -52,6 +59,7 @@ def tool_check(desired_tool):
     
     tools = [
         'annotate_clusters',
+        'create_table',
         'filter_fastr',
         'generate_fastr',
         'metameta_utilities'

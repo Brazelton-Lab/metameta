@@ -19,11 +19,12 @@ are in generate_fastr.py
 Functions:
 entry_generator
 file_type
+gff_dict
 output
 verify_file
 '''
 
-__version__ = '0.0.0.8'
+__version__ = '0.0.0.9'
 
 import argparse
 import re
@@ -179,6 +180,27 @@ def file_type(in_file):
             sys.exit(1)
         return (in_file, fileType)
 
+def gff_dict(gff_file):
+    '''Reads a GFF file into a dictionary
+
+    Input:
+
+        gff_file:
+                The GFF3 file to be read.
+
+    Output:
+
+            A dictionary where each key is a contig header. Each value is a
+            list of tuples where each tuple contains nine items corresponds
+            to the nine columns in a GFF3 entry.
+    '''
+
+    from collections import defaultdict
+    annotations = defaultdict(list)
+    for entry in entry_generator(gff_file, 'gff3'):
+        annotations[entry[0]].append(tuple(entry))
+    return annotations
+
 def output(message, program_verbosity, message_verbosity, log_file = None,\
            fatal = False):
     '''Writes a verbosity dependant message to log file or STDOUT
@@ -231,13 +253,17 @@ def output(message, program_verbosity, message_verbosity, log_file = None,\
     if fatal:
         sys.exit(1)
 
-def verify_file(in_file):
+def verify_file(in_file, log_file == None):
     '''Checks a given file to see if it is a valid FASTA or FASTQ file
 
     Input:
 
         in_file:
                 The file to verify.
+
+        log_file:
+                A log file to write any output too. Default is None, which
+                writes to stdout
     
     Output:
             A tuple with input file and file type.
@@ -319,16 +345,16 @@ def verify_file(in_file):
                         regex += '$'
                     splitMatches = re.findall(regex, entry)
                     if len(splitMatches) != 1:
-                        print('The following line:\n')
-                        print(entry)
-                        print('\nDoes not match the regular expression:\n')
-                        print(regex)
-                        print('\nSee https://docs.python.org/3.4/'\
-                              + 'library/re.html for information '\
-                              + 'on how to interpret regular expressions.')
-                        print('\nThe entire entry containing the error'\
-                              + ' follows:\n')
-                        print(wholeEntry)
+                        message = 'The following line:\n\n' + entry + '\n'\
+                                  + 'Does not match the regular expression:\n'\
+                                  + '\n' + regex + '\n'\
+                                  + 'See https://docs.python.org/3.4/'\
+                                  + 'library/re.html for information '\
+                                  + 'on how to interpret regular expressions.'\
+                                  + '\nThe entire entry containing the error'\
+                                  + ' follows:\n\n' + wholeEntry + '\n'
+                        output(message, 0, 0, log_file = log_file,\
+                               fatal = True)
             wholeEntry = ''
     return (in_file, fileType)
     
@@ -348,6 +374,7 @@ if __name__ == '__main__':
     dict_functions = {
         'entry_generator': entry_generator,
         'file_type': file_type,
+        'gff_dict': gff_dict,
         'output': output,
         'verify_file': verify_file,
         }

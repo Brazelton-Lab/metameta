@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'''annotate clusters in a stats.txt file
+'''DEPRECATED annotate clusters in a stats.txt file
 
 Usage:
 
@@ -22,9 +22,9 @@ Header
 Cluster Start
 Cluster End
 Average Read Depth
+GFF Gene
 GFF Start
 GFF End
-Gene
 '''
 
 __version__ = '0.0.0.2'
@@ -132,7 +132,7 @@ def main(stats_file, gff_file):
                 firstLine = ''
                 for item in line:
                     firstLine = firstLine + item + '\t'
-                firstLine = firstLine + 'GFF Start\tGFF End\tGene\n'
+                firstLine = firstLine + 'GFF Gene\tGFF Start\tGFF End\n'
                 out_handle.write(firstLine)
             else:
                 geneAnnotation = ''
@@ -155,8 +155,8 @@ def main(stats_file, gff_file):
                                       + ' cluster'
                             output(message ,args.verbosity, 2,\
                                    log_file = args.log_file)
-                            geneAnnotation = str(gffStart) + '\t' + \
-                                             str(gffEnd) + '\t' + gffData[0]
+                            geneAnnotation = gffData[0] + '\t' +str(gffStart)\
+                                             + '\t' + str(gffEnd)
                 toWrite = ''
                 for item in line:
                     toWrite = toWrite + item + '\t'

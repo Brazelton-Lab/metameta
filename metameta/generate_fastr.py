@@ -313,10 +313,14 @@ if __name__ == '__main__':
         if args.verify:
             output('Verifying: ' + args.fastaq[0], args.verbosity, 1,\
                    log_file = args.log_file)
-            verify_file(args.fastaq[0])
+            verify_file(args.fastaq[0], log_file = args.log_file)
+            output(args.fastaq[0] + ' is valid', args.verbosity, 1,\
+                   log_file = args.log_file)
             output('Verifying: ' + args.bsam[0], args.verbosity, 1,\
                    log_file = args.log_file)
-            verify_file(args.bsam[0])
+            verify_file(args.bsam[0] + ' is valid', log_file = args.log_file)
+            output(args.bsam[0], args.verbosity, 1,\
+                   log_file = args.log_file)
         output('Generating FASTR file: ' + args.fastr, args.verbosity, 1,\
                log_file = args.log_file)
         generate_fastr(args.fastaq[0], args.bsam[0],\

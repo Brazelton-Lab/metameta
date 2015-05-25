@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'''create a table metatranscriptomic coverage by sample
+'''DEPRECATED create a table metatranscriptomic coverage by sample
 
 Usage:
 
