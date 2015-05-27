@@ -24,7 +24,7 @@ output
 verify_file
 '''
 
-__version__ = '0.0.0.9'
+__version__ = '0.0.0.10'
 
 import argparse
 import re
@@ -253,7 +253,7 @@ def output(message, program_verbosity, message_verbosity, log_file = None,\
     if fatal:
         sys.exit(1)
 
-def verify_file(in_file, log_file == None):
+def verify_file(in_file, log_file = None):
     '''Checks a given file to see if it is a valid FASTA or FASTQ file
 
     Input:

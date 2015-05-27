@@ -115,10 +115,10 @@ def decompress_fastr(sequence):
     decompressedSequence = []
     for base in depthSequence:
         try:
-            int(hit)
-            decompressedSequence.append(int(hit))
+            int(base)
+            decompressedSequence.append(int(base))
         except ValueError:
-            sep = hit.split('x')
+            sep = base.split('x')
             sep[1] = sep[1].replace('\n', '')
             for c in range(int(sep[0])):
                 decompressedSequence.append(int(sep[1]))

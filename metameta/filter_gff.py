@@ -37,9 +37,10 @@ function reports two reads with the same heading since they are from
 the same FASTR heading.
 '''
 
-__version__ = '0.0.0.1'
+__version__ = '0.0.0.2'
 
 import argparse
+from generate_fastr import *
 from metameta_utilities import *
 import sys
 
@@ -100,22 +101,25 @@ def filter_by_size(unfiltered_list, tuple_pos = None, min_length = None,\
     for subList in listsToFilter:
         subLength = len(subList)
         if min_length != None and subLength < min_length:
-            message = str(subList) + ' in '+ str(unfiltered_list) + \
-                      ' is less than the minimum length'\
+            message = str(listsToFilter[position]) + ' in '\
+                      + str(unfiltered_list[position])\
+                      + ' is less than the minimum length of '\
                       + str(min_length)
             output(message, args.verbosity, 2, log_file = log_file)
             shortLists.append(unfiltered_list[position])
         elif max_length != None and subLength > max_length:
-            message = str(subList) + ' in '+ str(unfiltered_list) + \
-                      ' is greater than the maximum length'\
+            message = str(listsToFilter[position]) + ' in '\
+                      + str(unfiltered_list[position])\
+                      + ' is greater than the maximum length of '\
                       + str(max_length)
             output(message, args.verbosity, 2, log_file = log_file)
             longLists.append(unfiltered_list[position])
         else:
-            message = str(subList) + ' in '+ str(unfiltered_list) + \
-                      ' is within the length parameters: '\
-                      + 'minimum length = ' + str(min_length) + \
-                      ' and maximum length = ' + str(max_length)
+            message = str(listsToFilter[position]) + ' in '\
+                      + str(unfiltered_list[position])\
+                      + ' is within the length parameters: '\
+                      + 'minimum length = ' + str(min_length)\
+                      + ' and maximum length = ' + str(max_length)
             output(message, args.verbosity, 2, log_file = log_file)
             idealLists.append(unfiltered_list[position])
         position += 1
@@ -160,7 +164,8 @@ def isolate_clusters(fastr_file, log_file = None):
     localCluster = []
     for entry in entry_generator(fastr_file, 'fastr'):
         header = entry[0][1:-1]
-        hitSequence = decompress_fastr(entry[1].split('-'))
+        hitSequence = decompress_fastr(entry[1]).split('-')
+        hitSequence = [int(i) for i in hitSequence]
         maxLength = len(hitSequence) - 1
         basePosition = 0
         clusterStart = 0
@@ -176,7 +181,7 @@ def isolate_clusters(fastr_file, log_file = None):
                 clusterEnd = basePosition
                 clusterData = (header, clusterStart, clusterEnd, localCluster)
                 clusters.append(clusterData)
-                clusterLength = str(len(clusterEnd - clusterStart))
+                clusterLength = str(clusterEnd - clusterStart)
                 output(clusterLength + ' base cluster isolated',\
                        args.verbosity, 2, log_file = log_file)
                 localCluster = []
@@ -188,7 +193,7 @@ def isolate_clusters(fastr_file, log_file = None):
                 localCluster.append(base)
                 clusterData = (header, clusterStart, clusterEnd, localCluster)
                 clusters.append(clusterData)
-                clusterLength = str(len(clusterEnd - clusterStart))
+                clusterLength = str(clusterEnd - clusterStart)
                 output(clusterLength + ' base cluster isolated',\
                        args.verbosity, 2, log_file = log_file)
                 localCluster = []
@@ -243,9 +248,9 @@ def main():
     output('Sorting clusters by size', args.verbosity, 1,\
            log_file = args.log_file)
     shortClusters, idealClusters, longClusters =\
-                   filter_by_size(rawClusters, tuplePos = 3,\
-                                  min_length = min_length,\
-                                  max_length = max_length)
+                   filter_by_size(rawClusters, tuple_pos = 3,\
+                                  min_length = args.min_length,\
+                                  max_length = args.max_length)
     output('Reading ' + args.gff[0], args.verbosity, 1,\
            log_file = args.log_file)
     gffFile = gff_dict(args.gff[0])
@@ -259,8 +264,8 @@ def main():
         clusterEnd = cluster[2]
         for gffAnn in gffFile[clusterHeader]:
             gffSeqId = gffAnn[0]
-            gffStart = gffAnn[3]
-            gffEnd = gffAnn[4]
+            gffStart = int(gffAnn[3])
+            gffEnd = int(gffAnn[4])
             message = 'Determining if ' + gffSeqId\
                       + ' annotates the same region as the'\
                       + ' cluster ' + clusterHeader
@@ -269,9 +274,10 @@ def main():
             sameGene = same_gene(clusterStart, clusterEnd, gffStart, gffEnd)
             if sameGene:
                 gffHeader = '##sequence-region ' + gffSeqId + ' '\
-                             + gffStart + ' ' + gffEnd
-                outFileHeader.append(geneHeader)
+                             + str(gffStart) + ' ' + str(gffEnd)
+                outFileHeader.append(gffHeader)
                 gffBody = '\t'.join(str(i) for i in gffAnn)
+                outFileBody.append(gffBody)
     output('Writing ' + args.output, args.verbosity, 1,\
            log_file = args.log_file)
     with open(args.output, 'w') as out_handle:
