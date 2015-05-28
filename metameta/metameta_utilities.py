@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-'''generic bioinformatic related functions
+'''generic bioinformatic functions
 
 Usage:
 
-    metameta_utilities.py [--version] <functions>
+    metameta_utilities.py <functions>
 
 <functions> will give the help for that each function
 listed (multiple functions can be specified).
@@ -24,135 +24,139 @@ output
 verify_file
 '''
 
-__version__ = '0.0.0.10'
+__version__ = '0.0.0.11'
 
 import argparse
 import re
 import string
 import sys
 
-def entry_generator(in_file, file_type):
-    '''Generates and returns entries for FASTA, FASTQ, and SAM files
+def entry_generator(in_file, log_file = None,):
+    '''Generates and returns entries for several bioinformatic file types
 
     Input:
 
         in_file:
-                The FASTA, FASTQ, or SAM file to generate entries from
+                The FASTA, FASTQ, FASTR, GFF3, or SAM file to generate
+                entries from
 
-        file_type:
-                ['gff', 'fasta', 'fastq', 'sam']
+        log_file:
+                A log file to write any output too. Default is None, which
+                writes to stdout.
 
     Output:
-            This function is a generator so it can repeatedly yield
+            This function is a generator so it repeatedly yield
             entries. Each yielded entry is a list where each item
-            is a different line of the entry. As such, SAM files
-            have a single item, FASTA files have two, and FASTQ files
-            have four.
+            is a different line of the entry. As such, SAM and GFF3 files
+            have a single item, FASTA and FASTR files have two items, and
+            FASTQ files have four items.
     '''
 
     entryParts = []
+    acceptableFileTypes = ['fasta', 'fastq', 'fastr', 'gff3', 'sam']
+    fileType = file_type(in_file)[1]
+    if fileType not in acceptableFileTypes:
+        strFileTypes = '\n'.join(acceptableFileTypes)
+        message = fileType + ' is not an acceptable file type. Acceptable ' +\
+                  ' file types are:\n' + strFileTypes + '\n'
+        output(message, 1, 1, log_file = log_file, fatal = True)
     with open(in_file, 'rU') as in_handle:
-        startChar = ''
         for line in in_handle:
-            if line == '\n':
-                    print('There is an empy line in: ' + in_file)
-                    sys.exit(1)
             entryPartsLength = len(entryParts)
             if file_type == 'fasta' or file_type == 'fastr':
                 if file_type == 'fasta':
                     startChar = '>'
-                else:
+                elif file_type = 'fastr':
                     startChar = '+'
                 if line.startswith('@'):
-                    print(in_file + ' may be a mixture of FASTA/R and FASTQ'\
-                          + ' files.')
-                    print('Suspect line follows: ')
-                    print(line)
-                    sys.exit(1)
-                elif entryPartsLength == 0:
-                    entryParts.append(line)
+                    message = in_file + ' may be a mixture of FASTA/R and '\
+                              + 'FASTQ files. Suspect line follows: \n'\
+                              + line + 'n\'
+                    output(message, 1, 1, log_file = log_file, fatal = True)
+                elif entryPartsLength == 0 and line.startswith(startChar):
+                    entryParts.append(line.rstrip('\n'))
                 elif line.startswith(startChar) and entryPartsLength == 2:
                     yield entryParts
                     entryParts = []
-                    entryParts.append(line)
-                elif not line.startswith(startChar):
+                    entryParts.append(line.rstrip('\n'))
+                elif not line.startswith(startChar) and entryPartsLength != 0:
                     try:
-                        entryParts[1] = entryParts[1].replace('\n', line)
+                        entryParts[1] += line.rstrip('\n')
                     except IndexError:
-                        entryParts.append(line)
+                        entryParts.append(line.rstrip('\n'))
                 else:
-                    print('Unknown error with file.')
-                    sys.exit(1)
+                    message = 'Unknown error with file.'
+                    output(message, 1, 1, log_file = log_file, fatal = True)
             elif file_type == 'fastq':
                 if line.startswith('>') and entryPartsLength < 3:
-                    print(in_file + ' may be a mixture of FASTA and FASTQ'\
-                          + ' files.')
-                    print('Suspect line follows: ')
-                    print(line)
-                    sys.exit(1)
-                elif entryPartsLength == 0:
-                    entryParts.append(line)
+                    message = in_file + ' may be a mixture of FASTA and FASTQ'\
+                              + ' files. Suspect line follows:\n'\
+                              + line + '\n'
+                    output(message, 1, 1, log_file = log_file, fatal = True)
+                elif entryPartsLength == 0 and line.startswith('@'):
+                    entryParts.append(line.rstrip('\n'))
                 elif entryPartsLength == 1:
-                    entryParts.append(line)
+                    entryParts.append(line.rstrip('\n'))
                 elif not line.startswith('+') and entryPartsLength == 2:
-                    entryParts[1] = entryParts[1].replace('\n', line)
+                    entryParts[1] += line.rstrip('\n')
                 elif line.startswith('+') and entryPartsLength == 2:
-                    entryParts.append(line)
+                    entryParts.append(line.rstrip('\n'))
                 elif entryPartsLength == 3:
-                    entryParts.append(line)
+                    entryParts.append(line.rstrip('\n'))
                 elif len(entryParts[3]) > len(entryParts[1]):
-                    print('Number of bases and quality scores do no match.')
-                    print('The entry containing the error follows:\n')
-                    for part in entryParts:
-                        wholeEntry += part
-                    print(wholeEntry)
-                    sys.exit(1)
+                    wholeEntry = '\n'.join(entryParts)
+                    message = 'Number of bases and quality scores do not '\
+                              + 'match. The entry containing the error '\
+                              + 'follows:\n' + wholeEntry + '\n'
+                    output(message, 1, 1, log_file = log_file, fatal = True)
                 elif entryPartsLength == 4 and len(entryParts[1]) !=\
                         len(entryParts[3]):
-                    entryParts[3] = entryParts[3].replace('\n', line)
+                    entryParts[3] += line.rstrip('\n')
                 elif entryPartsLength == 4 and len(entryParts[1]) ==\
                         len(entryParts[3]):
                     yield entryParts
                     entryParts = []
-                    entryParts.append(line)
+                    entryParts.append(line.rstrip('\n'))
                 else:
-                    print('Unknown error with file.')
-                    sys.exit(1)
-            elif file_type == 'sam':
-                if not line.startswith('@'):
-                    parts = line.split('\t')
+                    message = 'Unknown error with file.'
+                    output(message, 1, 1, log_file = log_file, fatal = True)
+            elif file_type == 'sam' or file_type == 'gff3':
+                if file_type == 'sam':
+                    starChar = '@'
+                elif file_type == 'gff3':
+                    starChar = '##'
+                if not line.startswith(startChar):
+                    parts = line.rstrip('\n').split('\t')
                     for part in parts:
                         entryParts.append(part)
                     yield entryParts
                     entryParts = []
-            elif file_type == 'gff3':
-                if line.startswith('>'):
-                    break
-                if not line.startswith('##'):
-                    parts = line.split('\t')
-                    for part in parts:
-                        entryParts.append(part)
-                    yield entryParts
-                    entryParts = []
-            else:
-                print(file_type + ' is not an acceptable file type.')
-                print('File type must be "gff", "fasta", "fastq", or "sam".')
-                sys.exit(1)
         else: #yield entryParts at EOF so that last entry is not lost
             if entryParts != []:
                 yield entryParts
 
-def file_type(in_file):
+def file_type(in_file, log_file = None):
     '''Reads the first line of the file and returns the file type
 
     Input:
-            in_file: a FASTA, FASTQ, SAM, or BAM file
+            in_file:
+                    A FASTA, FASTQ, GFF3, SAM, or BAM file
+
+            log_file:
+                    A log file to write any output too. Default is None, which
+                    writes to stdout.
 
     Output:
             A tuple containing the input file name and the file type
-            (in_file, ['bam', 'gff3', 'fasta', 'fastr', 'fastq', 'sam'])
+            (in_file, ['bam', 'fasta', 'fastr', 'fastq', 'gff3', 'sam'])
     '''
-    
+
+    acceptableFileTypes = ['bam', 'fasta', 'fastq', 'fastr', 'gff3', 'sam']
+    if fileType not in acceptableFileTypes:
+        strFileTypes = '\n'.join(acceptableFileTypes)
+        message = fileType + ' is not an acceptable file type. Acceptable ' +\
+                  ' file types are:\n' + strFileTypes + '\n'
+        output(message, 1, 1, log_file = log_file, fatal = True)
     with open(in_file, 'rU+') as in_handle:
         fileType = ''
         # Credit for following five lines:
@@ -174,10 +178,6 @@ def file_type(in_file):
             fileType = 'fastq'
         elif firstBlock.startswith('##gff-version 3'):
             fileType = 'gff3'
-        else:
-            print(in_file + ' is not a properly formatted FASTA, '\
-                + ' FASTR, FASTQ, SAM, BAM, or GFF3 file.')
-            sys.exit(1)
         return (in_file, fileType)
 
 def gff_dict(gff_file):
@@ -214,12 +214,12 @@ def output(message, program_verbosity, message_verbosity, log_file = None,\
         program_verbosity:
                 The verbosity setting of the program
                 calling this function. This variable
-                is an integer.
+                must be an integer.
 
         message_verbosity:
                 The verbosity setting of the message
                 to be written. This variable
-                is an integer.
+                must be an integer.
 
         log_file:
                 An optional log file to write the
@@ -245,16 +245,19 @@ def output(message, program_verbosity, message_verbosity, log_file = None,\
     '''
     
     if int(program_verbosity) >= int(message_verbosity):
+        if fatal:
+            fatalMessage = '\nAbove error is fatal. Exiting program.'
+            message += fatalMessage
         if log_file == None:
             print(message)
         else:
             with open(log_file, 'a') as out_handle:
                 out_handle.write(message + '\n')
-    if fatal:
-        sys.exit(1)
+        if fatal:
+            sys.exit(1)
 
 def verify_file(in_file, log_file = None):
-    '''Checks a given file to see if it is a valid FASTA or FASTQ file
+    '''Checks a given file is valid
 
     Input:
 
@@ -263,14 +266,14 @@ def verify_file(in_file, log_file = None):
 
         log_file:
                 A log file to write any output too. Default is None, which
-                writes to stdout
+                writes to stdout.
     
     Output:
             A tuple with input file and file type.
-            (input file, ['bam', 'fasta', 'fastr', 'fastq', 'gff3'])
+            (input file, ['bam', 'fasta', 'fastr', 'fastq', 'gff3', 'sam'])
 
-        This function determines whether a file is a FASTA, FASTQ, or
-    SAM file by the file's first few characters. It then uses a file
+        This function determines whether a file is sent to file_type
+    to determine how to evaluate the file. It then uses a file
     type dependant regular expression to analyze each entry in the file.
     If a file entry does not match the regular expression then the regular
     expression and entry are broken into parts so that the user is given
@@ -282,54 +285,48 @@ def verify_file(in_file, log_file = None):
     no file-related error will occur in the script using the file.
     '''
 
+    fileRegex = {
+        'fasta': r'^>.+\n[ACGTURYKMSWBDHVNX]+\n$',
+        'fastq': r'^@.+\n[ACGTURYKMSWBDHVNX]+\n\+.*\n.+\n$',
+        'fastr': r'^\+.+\n[\dx-]*\d\n$',
+        'gff3': r'^[a-zA-Z0-9.:^*$@!+_?-|]+\t.+\t.+\t\d+\t\d+\t'\
+                + r'\d+\.?\d*\t[+-.]\t[0-2]\t.*\n$',
+        'sam': r'^[!-?A-~]{1,255}\t'\
+               + r'([0-9]{1,4}|[0-5][0-9]{4}|'\
+               + r'[0-9]{1,4}|[1-5][0-9]{4}|'\
+               + r'6[0-4][0-9]{3}|65[0-4][0-9]{2}|'\
+               + r'655[0-2][0-9]|6553[0-7])\t'\
+               + r'\*|[!-()+-<>-~][!-~]*\t'\
+               + r'([0-9]{1,9}|1[0-9]{9}|2(0[0-9]{8}|'\
+               + r'1([0-3][0-9]{7}|4([0-6][0-9]{6}|'\
+               + r'7([0-3][0-9]{5}|4([0-7][0-9]{4}|'\
+               + r'8([0-2][0-9]{3}|3([0-5][0-9]{2}|'\
+               + r'6([0-3][0-9]|4[0-7])))))))))\t'\
+               + r'([0-9]{1,2}|1[0-9]{2}|'\
+               + r'2[0-4][0-9]|25[0-5])\t'\
+               + r'\*|([0-9]+[MIDNSHPX=])+\t'\
+               + r'\*|=|[!-()+-<>-~][!-~]*\t'\
+               + r'([0-9]{1,9}|1[0-9]{9}|2(0[0-9]{8}|'\
+               + r'1([0-3][0-9]{7}|4([0-6][0-9]{6}|'\
+               + r'7([0-3][0-9]{5}|4([0-7][0-9]{4}|'\
+               + r'8([0-2][0-9]{3}|3([0-5][0-9]{2}|'\
+               + r'6([0-3][0-9]|4[0-7])))))))))\t'\
+               + r'-?([0-9]{1,9}|1[0-9]{9}|2(0[0-9]{8}|'\
+               + r'1([0-3][0-9]{7}|4([0-6][0-9]{6}|'\
+               + r'7([0-3][0-9]{5}|4([0-7][0-9]{4}|'\
+               + r'8([0-2][0-9]{3}|3([0-5][0-9]{2}|'\
+               + r'6([0-3][0-9]|4[0-7])))))))))\t'\
+               + r'\*|[A-Za-z=.]+\t'\
+               + r'[!-~]+\n$'
+        }
+    fileType = file_type(in_file)[1]
+    if fileType == 'bam':
+        return (in_file, fileType) #Don't verify BAM files
+    else:
+        regexString = re.compile(fileRegex[fileType])
     with open(in_file, 'rU') as in_handle:
-        wholeEntry = ''
-        fileType = file_type(in_file)[1]
-        regexString = ''
-        if fileType == 'bam':
-            return (in_file, fileType) #Don't verify BAM files
-        elif fileType == 'sam':
-            regexString = r'^[!-?A-~]{1,255}\t'\
-                          + r'([0-9]{1,4}|[0-5][0-9]{4}|'\
-                          + r'[0-9]{1,4}|[1-5][0-9]{4}|'\
-                          + r'6[0-4][0-9]{3}|65[0-4][0-9]{2}|'\
-                          + r'655[0-2][0-9]|6553[0-7])\t'\
-                          + r'\*|[!-()+-<>-~][!-~]*\t'\
-                          + r'([0-9]{1,9}|1[0-9]{9}|2(0[0-9]{8}|'\
-                          + r'1([0-3][0-9]{7}|4([0-6][0-9]{6}|'\
-                          + r'7([0-3][0-9]{5}|4([0-7][0-9]{4}|'\
-                          + r'8([0-2][0-9]{3}|3([0-5][0-9]{2}|'\
-                          + r'6([0-3][0-9]|4[0-7])))))))))\t'\
-                          + r'([0-9]{1,2}|1[0-9]{2}|'\
-                          + r'2[0-4][0-9]|25[0-5])\t'\
-                          + r'\*|([0-9]+[MIDNSHPX=])+\t'\
-                          + r'\*|=|[!-()+-<>-~][!-~]*\t'\
-                          + r'([0-9]{1,9}|1[0-9]{9}|2(0[0-9]{8}|'\
-                          + r'1([0-3][0-9]{7}|4([0-6][0-9]{6}|'\
-                          + r'7([0-3][0-9]{5}|4([0-7][0-9]{4}|'\
-                          + r'8([0-2][0-9]{3}|3([0-5][0-9]{2}|'\
-                          + r'6([0-3][0-9]|4[0-7])))))))))\t'\
-                          + r'-?([0-9]{1,9}|1[0-9]{9}|2(0[0-9]{8}|'\
-                          + r'1([0-3][0-9]{7}|4([0-6][0-9]{6}|'\
-                          + r'7([0-3][0-9]{5}|4([0-7][0-9]{4}|'\
-                          + r'8([0-2][0-9]{3}|3([0-5][0-9]{2}|'\
-                          + r'6([0-3][0-9]|4[0-7])))))))))\t'\
-                          + r'\*|[A-Za-z=.]+\t'\
-                          + r'[!-~]+\n&'
-        elif fileType == 'fasta':
-            regexString = r'^>.+\n[ACGTURYKMSWBDHVNX]+\n$'
-        elif fileType == 'fastr':
-            regexString = r'^\+.+\n(\d+-|\d+x\d+-)*\d+\n$'
-        elif fileType == 'fastq':
-            regexString = r'^@.+\n[ACGTURYKMSWBDHVNX]+\n\+.*\n.+\n$'
-        elif fileType == 'gff3':
-            regexString = r'^[a-zA-Z0-9.:^*$@!+_?-|]+\t.+\t.+\t\d+\t\d+\t'\
-                          + '(\.|\d+)+\t(\+|\-|\?)\t[0-2]\t.+product.+\n$'
-        elif fileType == 'bam':
-            return (in_file, fileType)
-        for entry in entry_generator(in_file, fileType):
-            for part in entry:
-                wholeEntry += part
+        for entry in entry_generator(in_file, log_file):
+            wholeEntry = '\n'.join(entry) + '\n'
             matches = re.findall(regexString, wholeEntry)
             if len(matches) != 1:
                 if fileType == 'sam' or fileType == 'gff3':
@@ -353,9 +350,8 @@ def verify_file(in_file, log_file = None):
                                   + 'on how to interpret regular expressions.'\
                                   + '\nThe entire entry containing the error'\
                                   + ' follows:\n\n' + wholeEntry + '\n'
-                        output(message, 0, 0, log_file = log_file,\
+                        output(message, 1, 1, log_file = log_file,\
                                fatal = True)
-            wholeEntry = ''
     return (in_file, fileType)
     
 if __name__ == '__main__':
@@ -366,7 +362,7 @@ if __name__ == '__main__':
                         default = None,
                         nargs = '*',
                         help = 'print function help')
-    parser.add_argument('-v', '--version',
+    parser.add_argument('--version',
                         action = 'store_true',
                         help = 'prints tool version and exits')
     args = parser.parse_args()
@@ -392,5 +388,4 @@ if __name__ == '__main__':
                 print()
             except KeyError:
                 print('\nThere is no such function: ' + function + '\n')
-                sys.exit(1)
     sys.exit(0)

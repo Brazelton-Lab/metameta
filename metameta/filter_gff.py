@@ -42,6 +42,8 @@ __version__ = '0.0.0.2'
 import argparse
 from generate_fastr import *
 from metameta_utilities import *
+import re
+import statistics
 import sys
 
 def filter_by_size(unfiltered_list, tuple_pos = None, min_length = None,\
@@ -155,9 +157,8 @@ def isolate_clusters(fastr_file, log_file = None):
 
         localCluster:
                 The per base read depth data for all bases in the cluster
-                given in the FASTR format (non-compressed). Type
-                "metameta generate-fastr" with no arguments for more
-                information on the FASTR file type.
+                given in a list. Type "metameta generate-fastr" with no
+                arguments for more information on the FASTR file type.
     '''
     
     clusters = []
@@ -256,12 +257,14 @@ def main():
     gffFile = gff_dict(args.gff[0])
     outFileHeader = ['##gff-version 3']
     outFileBody = []
+    humann = {}
     output('Comparing clusters to GFF3 file annotations', args.verbosity, 1,
            log_file = args.log_file)
     for cluster in idealClusters:
         clusterHeader = cluster[0]
         clusterStart = cluster[1]
         clusterEnd = cluster[2]
+        clusterDepth = cluster[3]
         for gffAnn in gffFile[clusterHeader]:
             gffSeqId = gffAnn[0]
             gffStart = int(gffAnn[3])
@@ -278,9 +281,24 @@ def main():
                 outFileHeader.append(gffHeader)
                 gffBody = '\t'.join(str(i) for i in gffAnn)
                 outFileBody.append(gffBody)
+                if args.humann_table != None:
+                    try:
+                        gffDbIdSegment = re.findall('inference=.+;locus_tag=',\
+                                                    gffAnn[-1])[0]
+                        gffDbId = re.split('=|:|;', gffDbIdSegment)[-3]
+                        try:
+                            assert float(gffDbId)
+                        except:
+                            if not gffDbId in humann:
+                                humann[gffDbId] = statistics.mean(clusterDepth)
+                            elif statistics.mean(clusterDepth) >\
+                                 humann[gffDbId]:
+                                humann[gffDbId] = statistics.mean(clusterDepth)
+                    except IndexError:
+                        pass
     output('Writing ' + args.output, args.verbosity, 1,\
            log_file = args.log_file)
-    with open(args.output, 'w') as out_handle:
+    with open(args.output + '.gff', 'w') as out_handle:
         for header in outFileHeader:
             out_handle.write(header + '\n')
         lastLine = outFileBody[:-1]
@@ -289,6 +307,10 @@ def main():
                 out_handle.write(body)
             else:
                 out_handle.write(body + '\n')
+    if args.humann_table != None:
+        with open(args.humann_table + '.csv', 'w') as out_handle:
+            for key in humann:
+                out_handle.write(key + ',' + str(humann[key]) + '\n')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = __doc__,
@@ -310,6 +332,9 @@ if __name__ == '__main__':
                         default = None,
                         nargs = '?',
                         help = 'name of GFF3 file to write')
+    parser.add_argument('--humann_table',
+                        default = None,
+                        help = 'output file for humann csv')
     parser.add_argument('--min_length',
                         type = int,
                         default = 100,
@@ -338,7 +363,7 @@ if __name__ == '__main__':
     elif args.fastr == None:
         print(__doc__)
     elif args.gff == None:
-        message = 'Must specify a both a FASTR, GFF3, and output file'
+        message = 'Must specify a FASTR, GFF3, and output file'
         output(message, args.verbosity, 0,\
                log_file = args.log_file)
     else:

@@ -1,24 +1,34 @@
 #!/usr/bin/env python
 
-'''metameta - metatranscriptome to metagenome mapping analysis toolset
+'''metameta 0.0.0.19 - meta-transcriptome/genome mapping analysis toolkit
 
 Usage:
 
     metameta <tool> [arguments for tool]
 
-"metameta" without arguments will give help on the metameta package.
-"metameta --version" prints package version.
-"metameta <tool>" without any arguments will give the help for that tool.
-"--verify" in any tool verifies input files before use.
-"--log_file <log file>" in any tool will redirect output to the log file.
+Options:
 
-Verbosity Settings (after <tool>):
+    Toolkit (options from metameta, no tool specified/needed):
+    
+        --help            This help
+        --version         Print toolkit version and exits
+        --docs            Show full manual
 
-    -v: Fatal errors and important information printed
-    -vv: Detailed information on everything the program is doing,
-         best reserved for debugging purposes
-    Note: any numbers of "v"s may be specified but anything greater than
-          -vv will be identical to -vv. Fatal errors are printed by default.   
+    General Tool Options (options shared by most or all tools):
+    
+        no arguments      Gives tool help and exits
+        --version         Prints tool version and exits
+        --verify          Verify relevant files before executing
+        --log_file        Write output to the log file
+
+    Verbosity Settings (all tools):
+
+        none: Fatal errors only
+        -v: Fatal errors and important information only
+        -vv: Detailed information on everything the program is doing,
+             best reserved for debugging purposes
+        Note: any numbers of "v"s may be specified but anything greater than
+        -vv will be identical to -vv.  
 
 Tools:
 
@@ -48,7 +58,7 @@ Tools:
             metameta.
 '''
 
-__version__ = '0.0.0.18'
+__version__ = '0.0.0.19'
 
 import argparse
 import subprocess
@@ -85,8 +95,8 @@ def main():
     parser.add_argument('arguments',
                         nargs = argparse.REMAINDER,
                         help = 'arguments to pass to tool')
-    parser.add_argument('-v',' --version',
-                        help = 'prints package version and exits',
+    parser.add_argument(' --version',
+                        help = 'prints toolkit version and exits',
                         action = 'store_true')
     args = parser.parse_args()
 
@@ -96,8 +106,8 @@ def main():
     elif args.tool == None:
         print(__doc__)
         sys.exit(0)
-    elif args.arguments == [] and args.tool != None:
-        script = 'metameta/' + args.tool + '.py'
+    else:
+        script = 'bin/' + args.tool + '.py ' + arguments
         subprocess.call(['python', script])
     
 if __name__ == '__main__':
