@@ -17,14 +17,14 @@ in that tool, e.g. all functions for writing FASTR files
 are in generate_fastr.py
 
 Functions:
-entry_generator
-file_type
-gff_dict
-output
-verify_file
+    entry_generator
+    file_type
+    gff_dict
+    output
+    verify_file
 '''
 
-__version__ = '0.0.0.11'
+__version__ = '0.0.0.12'
 
 import argparse
 import re

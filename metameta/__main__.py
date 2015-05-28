@@ -1,25 +1,33 @@
 #!/usr/bin/env python
 
-'''metameta 0.0.0.19 - meta-transcriptome/genome mapping analysis toolkit
+'''metameta 0.0.0.20 - meta-transcriptome/genome mapping analysis toolkit
 
 Usage:
 
     metameta <tool> [arguments for tool]
 
+Synopsis:
+
+    metameta is a toolkit with a number of programs useful for analyzing
+    meta-transcriptome/genome data that has been mapped to a reference.
+    It is contains a number of generally useful bioinformatic scripts.
+    Type "metameta --docs" for full documentation.
+
 Options:
 
     Toolkit (options from metameta, no tool specified/needed):
     
-        --help            This help
-        --version         Print toolkit version and exits
-        --docs            Show full manual
+        --help             This help
+        --version          Print toolkit version and exits
+        --docs             Show full manual
 
     General Tool Options (options shared by most or all tools):
     
-        no arguments      Gives tool help and exits
-        --version         Prints tool version and exits
-        --verify          Verify relevant files before executing
-        --log_file        Write output to the log file
+        no arguments       Gives tool help and exits
+        --help             Gives tool help and exits
+        --version          Prints tool version and exits
+        --verify           Verify relevant files before executing
+        --log_file         Write output to the log file
 
     Verbosity Settings (all tools):
 
@@ -58,7 +66,7 @@ Tools:
             metameta.
 '''
 
-__version__ = '0.0.0.19'
+__version__ = '0.0.0.20'
 
 import argparse
 import subprocess
@@ -95,17 +103,20 @@ def main():
     parser.add_argument('arguments',
                         nargs = argparse.REMAINDER,
                         help = 'arguments to pass to tool')
-    parser.add_argument(' --version',
+    parser.add_argument('--docs',
+                        help = 'prints documentation and exits',
+                        action = 'store_true')
+    parser.add_argument('--version',
                         help = 'prints toolkit version and exits',
                         action = 'store_true')
     args = parser.parse_args()
 
     if args.version:
         print(__version__)
-        sys.exit(0)
+    elif args.docs:
+        subprocess.call(['less', '../Documentation.txt'])
     elif args.tool == None:
         print(__doc__)
-        sys.exit(0)
     else:
         script = 'bin/' + args.tool + '.py ' + arguments
         subprocess.call(['python', script])
