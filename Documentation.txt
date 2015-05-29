@@ -1,3 +1,24 @@
+Clusters:
+    A cluster is defined as all consecutive bases containing non-zero read
+depth data flanked by bases containing read depths of zero or the end of
+the entry. Two examples follow:
+
+        200x0-3x10-4x11-7x18-50x15
+
+The above entry has a single cluster consisting of the read depth data:
+    3x10-4x11-7x18-50x15
+This is one cluster because it is flanked by bases of read depth zero
+on one end and the end of the entry on the other.
+
+        150x0-10x3-20x6-250x7-8-9-10x0-50x1-20x2-30x3-12x7-80x0
+
+The above entry has two clusters:
+    10x3-20x6-250x7-8-9
+    50x1-20x2-30x3-12x7
+Both clusters are flanked by bases of read depth zero. Thus this
+function reports two reads with the same heading since they are from
+the same FASTR heading.
+
 FASTR Format:
     The FASTR Format is identical to the FASTA Format except the
 bases are replaced by numbers representing the read depth of the
@@ -12,6 +33,12 @@ is nothing against doing this in general. Also, the FASTR file
 can list read depth as:
     16-16-16 or 3x16
 The later is compressed and thus reduces total file size.
+
+3-3-3-3-3-5-5-9-9-9-9-9-9
+
+    is compressed to:
+
+    5x3-2x5-6x9
 
 FASTR Entry Example:
 

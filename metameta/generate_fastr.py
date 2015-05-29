@@ -23,6 +23,7 @@ __version__ = '0.0.0.10'
 import argparse
 from metameta_utilities import *
 import pysam
+from screed.fasta import fasta_iter
 import sys
 
 def compress_fastr(sequence):
@@ -162,7 +163,8 @@ def main():
     sequenceDepth = []
     readType = ''
     with pysam.Samfile(sam_bam_file, 'rb') as alignmentFile:
-        for entry in entry_generator(args.fastaq[0]):
+        with open(args.fastaq, 'rU') as fastaqFile:
+        for fastaEntry in entry_generator(args.fastaq[0]):
             # Don't include '+' in header
             header = entry[0][1:]
             output('Analyzing read depth for: ' + header, args.verbosity, 2,\

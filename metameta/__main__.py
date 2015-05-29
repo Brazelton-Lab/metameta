@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'''metameta 0.0.0.20 - meta-transcriptome/genome mapping analysis toolkit
+'''metameta 0.0.0.21 - meta-transcriptome/genome mapping analysis toolkit
 
 Usage:
 
@@ -66,7 +66,7 @@ Tools:
             metameta.
 '''
 
-__version__ = '0.0.0.20'
+__version__ = '0.0.0.21'
 
 import argparse
 import subprocess
@@ -118,8 +118,8 @@ def main():
     elif args.tool == None:
         print(__doc__)
     else:
-        script = 'bin/' + args.tool + '.py ' + arguments
-        subprocess.call(['python', script])
+        script = 'bin/%s.py %s' % (args.tool, args.arguments)
+        subprocess.call([script])
     
 if __name__ == '__main__':
     main()
