@@ -4,8 +4,8 @@
 
 Usage:
 
-    compute_humann [--log_file] [--verbose] [--version] [--verify] <fastr>
-                   <gff> <output>
+    compute_humann [--log_file] [--verbose] [--version] [--verify] [--fastr]
+                   [--fasta] <gff> <output>
 '''
 
 import argparse
@@ -15,7 +15,29 @@ import re
 import statistics
 import sys
 
-def main():
+def fasta():
+    output('Reading ' + args.gff[0], args.verbosity, 1,\
+           log_file = args.log_file)
+    gffFile = gff_dict(args.gff[0])
+    with open(args.output + '.csv', 'w') as out_handle:
+        for entry in entry_generator(args.fastr[0], 'fastr'):
+            header = entry[0].lstrip('+').rstrip('\n').split(' ')
+            entryId = header[0]
+            if entryId in gffFile:
+                readDepth = header[-1].split('=')[1]
+                try:
+                    gffDbIdSegment = re.findall('inference=.+;locus_tag=',\
+                                                ann[-1])[0]
+                    gffDbId = re.split('=|:|;', gffDbIdSegment)[-3]
+                    try:
+                        assert float(gffDbId)
+                    except:
+                        out_handle.write(gffDbId + ',' + readDepth + '\n')
+                except IndexError:
+                    pass
+                
+
+def fastr():
     output('Reading ' + args.gff[0], args.verbosity, 1,\
            log_file = args.log_file)
     gffFile = gff_dict(args.gff[0])
@@ -45,12 +67,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = __doc__,
                                         formatter_class = argparse.\
                                         RawDescriptionHelpFormatter)
-    parser.add_argument('fastr',
-                        type = file_type,
-                        default = None,
-                        nargs = '?',
-                        help = 'FASTR file containing read depth data'\
-                        + ' for a metatranscriptome mapped onto a metagenome')
     parser.add_argument('gff',
                         type = file_type,
                         default = None,
@@ -61,6 +77,17 @@ if __name__ == '__main__':
                         default = None,
                         nargs = '?',
                         help = 'name of GFF3 file to write')
+    parser.add_argument('--fasta',
+                        type = file_type,
+                        default = None,
+                        nargs = '?',
+                        help = 'IDBA generated FASTA file')
+    parser.add_argument('--fastr',
+                        type = file_type,
+                        default = None,
+                        nargs = '?',
+                        help = 'FASTR file containing read depth data'\
+                        + ' for a metatranscriptome mapped onto a metagenome')
     parser.add_argument('-l', '--log_file',
                         default = None,
                         help = 'log file to print all messages to')
@@ -96,7 +123,10 @@ if __name__ == '__main__':
             verify_file(args.gff[0], log_file = args.log_file)
             output(args.gff[0] + ' is a valid', args.verbosity, 1,\
                    log_file = args.log_file)
-        main()
+        if args.fastr != None:
+            fastr()
+        if args.fasta != None:
+            fasta()
 
     sys.exit(0)
 

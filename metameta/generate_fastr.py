@@ -18,121 +18,20 @@ Arguments:
     output             Name of FASTR file containing read depth data to write
 '''
 
-__version__ = '0.0.0.10'
+__version__ = '0.0.0.11'
 
 import argparse
-from metameta_utilities import *
+from biofile_verifiers.verify_fasta import verify_fasta
+from biofile_verifiers.verify_fastq import verify_fastq
+from biofile_verifiers.verify_binary import verify_binary
+from metameta.metameta_utils.compress_fastr import compress_fastr
+from metameta.metameta_utils.decompress_fastr import decompress_fastr
+from metameta.metameta_utils.output import output
+from metameta.metameta_utils.write_fastr import write_fastr
 import pysam
 from screed.fasta import fasta_iter
+from screed.fastq import fastq_iter
 import sys
-
-def compress_fastr(sequence):
-    '''Compresses a FASTR sequence
-
-    Input:
-
-        sequence:
-                The FASTR sequence to compress as a list.
-
-    Output:
-            Returns the compressed FASTR sequence as a string.
-
-        compress_fastr compares each read depth to the previous
-    read depth to identify regions of repeats and rewrites them
-    as a multiplication. For example the following FASTR sequence:
-
-    3-3-3-3-3-5-5-9-9-9-9-9-9
-
-    is compressed to:
-
-    5x3-2x5-6x9
-    '''
-    
-    compressedSequence = []
-    lastRead = None
-    readRepeats = 0
-    for read in enumerate(sequence):
-        if read[1] == lastRead:
-            readRepeats += 1
-        else:
-            if readRepeats != 0:
-                compressedSequence.append(str(readRepeats + 1) + 'x' +\
-                                 str(lastRead))
-                readRepeats = 0
-            elif read[0] != 0:
-                compressedSequence.append(str(lastRead))
-            lastRead = read[1]
-        if read[0] + 1 == len(sequence):
-            if readRepeats != 0:
-                compressedSequence.append(str(readRepeats + 1) + 'x' +\
-                                 str(lastRead))
-            else:
-                compressedSequence.append(str(lastRead))
-            compressedSequence = '-'.join(compressedSequence)
-    return compressedSequence
-
-def decompress_fastr(sequence):
-    '''Decompresses a FASTR sequence
-
-    Input:
-
-        sequence:
-                The FASTR sequence to decompress as a string.
-
-    Output:
-            Returns the decompressed FASTR sequence as a string.
-
-        decompress_fastr splits a FASTR sequences by hyphens and
-    then by "x" if possible. If split by "x" For example the following
-    FASTR sequence:
-
-    5x3-2x5-6x9
-
-    is decompressed to:
-
-    3-3-3-3-3-5-5-9-9-9-9-9-9
-    '''
-
-    depthSequence = sequence.split('-')
-    decompressedSequence = []
-    for base in depthSequence:
-        try:
-            int(base)
-            decompressedSequence.append(int(base))
-        except ValueError:
-            sep = base.split('x')
-            sep[1] = sep[1].rstrip('\n')
-            decompressedSequence += [int(sep[1]) for i in range(int(sep[0]))]
-    decompressedSequence = '-'.join([str(i) for i in decompressedSequence])
-    return decompressedSequence
-
-def write_fastr(sequence_ids, sequences, fastr_file, write_type = 'a'):
-    '''Formats information for FASTR entries and writes them to a file
-
-    Input:
-
-        sequence_id:
-                The ID of the entry to be written as a list of strings.
-
-        sequence:
-                The sequence to be written as a list of strings.
-
-        fastr_file:
-                The file for the entry to be written to.
-
-        write_type:
-                How the entry should be written to the fastr_file, e.g.
-                "a" is for append and "w" is for write. Default is "a".
-
-    Output:
-            An entry is written to the fastr_file.
-    '''
-    
-    with open(fastr_file, write_type) as out_handle:
-        for sequence_id, sequence in zip(sequence_ids, sequences):
-            header = '+' + sequence_id + '\n'
-            fastrSequence = sequence + '\n'
-            out_handle.write(header + fastrSequence)
 
 def main():
     if args.fastaq[1] != 'fasta' and args.fastaq[1] != 'fastq':
@@ -199,21 +98,25 @@ if __name__ == '__main__':
                                         formatter_class = argparse.\
                                         RawDescriptionHelpFormatter)
     parser.add_argument('fastaq',
-                        type = file_type,
                         default = None,
                         nargs = '?',
                         help = 'FASTA or FASTQ file to analyze the read' +\
-                        ' depth of using the given SAM file')
+                        ' depth of using the given BAM file, default is FASTA')
     parser.add_argument('bam',
-                        type = file_type,
                         default = None,
                         nargs = '?',
-                        help = 'SAM or BAM file containing mapping' +\
+                        help = 'BAM file containing mapping' +\
                         'data for given FASTA/Q file')
     parser.add_argument('output',
                         default = None,
                         nargs = '?',
                         help = 'name of FASTR file to be written')
+    parser.add_argument('--fastq',
+                        action = 'store_true',
+                        help = 'specifies FASTA/Q input file as a FASTQ file')
+    parser.add_argument('--compressed',
+                        action = 'store_true',
+                        help = 'compresses FASTR output file')
     parser.add_argument('-l', '--log_file',
                         default = None,
                         help = 'log file to print all messages to')
@@ -236,11 +139,11 @@ if __name__ == '__main__':
     elif args.fastaq == None or\
          args.bam == None or\
          args.output == None:
-        message = 'Need to specify a FASTA/Q, B/SAM, and output file.'
+        message = 'Need to specify a FASTA/Q, BAM, and output file.'
         output(message, args.verbosity, 0, fatal = True)
     else:
         if args.verify:
-            output('Verifying: ' + args.fastaq[0], args.verbosity, 1,\
+            output('Verifying: ' + args.fastaq, args.verbosity, 1,\
                    log_file = args.log_file)
             verify_file(args.fastaq[0], log_file = args.log_file)
             output(args.fastaq[0] + ' is valid', args.verbosity, 1,\
