@@ -18,18 +18,17 @@ Synopsis:
 Required Arguments:
 
     gff3             GFF3 formatted annotation file
-    output           a CSV delimited file containing gene ID and abundance,
+    output           CSV file containing gene ID and abundance,
                      default delimiter is "\t"
 
 Optional Arguments:
 
     --bam            BAM file containing alignment data
-    --delimiter      the character to delimit the output file by,
-                     default is '\t'
+    --delimiter      the character to delimit the output file by [Default: '\t']
     --fasta          IDBA-UD generated FASTA file used for assembly
     --fastr          FASTR file containing read depth data
     --normalize      Method to calculate coverage values (see below for more
-                     information on normalization) [Default: read_count]
+                     information on normalization) [Default: 'read_count']
 
 Supported Normalization Methods:
 
@@ -37,7 +36,7 @@ Supported Normalization Methods:
     read_count       Uses the number of reads used to assemble contig as
                      coverage [Default]
     rpk              Reads Per Kilobase: number of reads used to assemble
-                     contig divided by kilobases is contig (contig length
+                     contig divided by kilobases in the contig (contig length
                      divided by 1,000)
     rpkt, rpb        rpk times 1,000 (equivalent to reads per base)
     rpkm             rpk times 1,000,000
@@ -205,7 +204,7 @@ if __name__ == '__main__':
     parser.add_argument('--bam', metavar='BAM',
                         default=None,
                         nargs='?',
-                        help='BAM file ')
+                        help='BAM file containing mapping data')
     parser.add_argument('-d', '--database', metavar='DB',
                         default='ko',
                         help='extract hits from database "DB" [default: ko]')
