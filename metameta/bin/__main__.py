@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-"""metameta 0.0.0.21 - meta-transcriptome/genome mapping analysis toolkit
+"""metameta 0.0.0.50 - meta-transcriptome/genome mapping analysis toolkit
 
 Usage:
 
@@ -51,9 +51,11 @@ Tools:
             of a given FASTA or FASTQ file.
 """
 
-__version__ = '0.0.0.22'
+__version__ = '0.0.0.50'
 
 import argparse
+import metameta.bin
+from pkg_resources import resource_string
 import subprocess
 import sys
 
@@ -91,19 +93,20 @@ def main():
                         help='prints documentation and exits',
                         action='store_true')
     parser.add_argument('--version',
-                        help='prints toolkit version and exits',
-                        action='store_true')
+                        action='version',
+                        version=__version__)
     args = parser.parse_args()
 
-    if args.version:
-        print(__version__)
-    elif args.docs:
-        subprocess.call(['less', '../Documentation.txt'])
+    location = metameta.bin.__file__.rstrip('__init__.pyc')
+    if args.docs:
+        documentation = resource_string('metameta.data', 'Documentation.txt')
+        subprocess.call(['less', documentation])
     elif args.tool is None:
         print(__doc__)
     else:
-        script = 'bin/%s.py %s' % (args.tool, args.arguments)
-        subprocess.call([script])
+        script = location + args.tool + '.py'
+        command = ['python'] + [script] + args.arguments
+        subprocess.call(command)
 
 
 if __name__ == '__main__':

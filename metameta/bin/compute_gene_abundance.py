@@ -24,7 +24,8 @@ Required Arguments:
 Optional Arguments:
 
     --bam            BAM file containing alignment data
-    --delimiter      the character to delimit the output file by [Default: '\t']
+    --delimiter      the character to delimit the output file by
+                     [Default: '\t']
     --fasta          IDBA-UD generated FASTA file used for assembly
     --fastr          FASTR file containing read depth data
     --normalize      Method to calculate coverage values (see below for more
@@ -32,7 +33,8 @@ Optional Arguments:
 
 Supported Normalization Methods:
 
-    arpb             Average Reads Per Base: average depth coverage of each base
+    arpb             Average Reads Per Base: average depth coverage of each
+                     base
     read_count       Uses the number of reads used to assemble contig as
                      coverage [Default]
     rpk              Reads Per Kilobase: number of reads used to assemble
@@ -160,11 +162,11 @@ def normalization_method(method):
     acceptable_methods = ['read_count', 'rpk', 'rpkt', 'rpkm', 'rpkb', ' rpb',
                           'arpb']
     if method in acceptable_methods:
-        return method
+        return str(method)
     else:
         message = '{0} is not a supported normalization method. Supported ' \
-                  'normalization methods follow:\n{1}' \
-            .format(method, '\n'.join(acceptable_methods))
+                  'normalization methods follow:\n{1}'.format(method,
+                  '\n'.join(acceptable_methods))
         output(message, 0, 0, fatal=True)
 
 
@@ -223,7 +225,6 @@ if __name__ == '__main__':
     parser.add_argument('--normalize', metavar='normalization method',
                         type=normalization_method,
                         default='read_count',
-                        action='store_true',
                         help='how to normailze data [default: read_count]')
     parser.add_argument('-v', '--verbosity',
                         action='count',
@@ -297,8 +298,8 @@ if __name__ == '__main__':
             out_handle.write('Database_ID\tCoverage_{0}\n'.format(
                                                           args.normalize))
         if args.bam:
-            message = 'Computing gene abundances from BAM file {0}'.format(
-                                                                   args.bam)
+            message = 'Computing gene abundances from BAM ' \
+                      'file {0}'.format(args.bam)
             output(message, args.verbosity, 1, log_file=args.log_file)
             compute_gene_abundance_from_fasta(args.bam,
                                               args.gff3,
@@ -306,8 +307,8 @@ if __name__ == '__main__':
                                               args.normalize,
                                               args.output)
         elif args.fasta:
-            message = 'Computing gene abundances from IDBA-UD generated FASTA' \
-                      ' file {0}'.format(args.fasta)
+            message = 'Computing gene abundances from IDBA-UD generated ' \
+                      'FASTA file {0}'.format(args.fasta)
             output(message, args.verbosity, 1, log_file=args.log_file)
             compute_gene_abundance_from_fasta(args.fasta,
                                               args.gff3,
@@ -315,8 +316,8 @@ if __name__ == '__main__':
                                               args.normalize,
                                               args.output)
         elif args.fastr:
-            message = 'Computing gene abundances from FASTR file {0}'.format(
-                                                                     args.fastr)
+            message = 'Computing gene abundances from FASTR ' \
+                      'file {0}'.format(args.fastr)
             output(message, args.verbosity, 1, log_file=args.log_file)
             compute_gene_abundance_from_fastr(args.fastr,
                                               args.gff3,

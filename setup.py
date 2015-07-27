@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='metameta',
-      version='0.0.0.22',
+      version='0.0.0.50',
       description='Toolkit for analyzing '
                   + 'meta-transcriptome/metagenome mapping data',
       classifiers=[
@@ -19,12 +19,16 @@ setup(name='metameta',
                + 'short reads mapping alignment',
       url='https://github.com/Brazelton-Lab/metameta/',
       download_url='https://github.com/Brazelton-Lab/metameta/tarball/'
-                   + '0.0.0.22',
+                   + '0.0.0.50',
       author='Alex Hyer',
       author_email='theonehyer@gmail.com',
       license='GPL',
-      packages=['biofile_iterators', 'biofile_verifiers', 'metameta'],
+      packages=['metameta', 'metameta.bin', 'metameta.metameta_utils',
+                'metameta.data'],
       include_package_data=True,
+      package_data={
+          'data': ['Documentation.txt'],
+      },
       zip_safe=False,
       install_requires=[
           'bio_utils',
@@ -33,6 +37,6 @@ setup(name='metameta',
           'statistics'
       ],
       entry_points={
-          'console_scripts': ['metameta = bin.__main__:main']
+          'console_scripts': ['metameta = metameta.bin.__main__:main']
       },
       )

@@ -115,14 +115,12 @@ if __name__ == '__main__':
                         help='verify input files before use')
     parser.add_argument('--version',
                         action='version',
-                        version='0.0.0.12')
+                        version=__version__)
     args = parser.parse_args()
 
     if args.fastaq is None:
         print(__doc__)
-    elif args.fastaq is None or\
-            args.bam is None or\
-            args.output is None:
+    elif args.bam is None or args.output is None:
         message = 'Need to specify a FASTA/Q, BAM, and output file.'
         output(message, args.verbosity, 0, fatal=True)
     else:
@@ -150,11 +148,11 @@ if __name__ == '__main__':
                    fatal=not validBam)
 
         # Main portion of program
-        output('Generating FASTR file: {0}'.format(args.output), args.verbosity, 1,
-               log_file=args.log_file)
+        output('Generating FASTR file: {0}'.format(args.output),
+               args.verbosity, 1, log_file=args.log_file)
         main()
-        output(args.output + ' generated successfully.', args.verbosity,
-               2, log_file=args.log_file)
+        output('{0} generated successfully.'.format(args.output),
+               args.verbosity, 2, log_file=args.log_file)
     output('Exiting generate_fastr.py', args.verbosity, 1,
            log_file=args.log_file)
     sys.exit(0)
