@@ -26,7 +26,7 @@ Optional Arguments:
 
 from __future__ import print_function
 
-__version__ = '0.0.0.12'
+__version__ = '0.0.0.13'
 
 import argparse
 from bio_utils.verifiers.fasta import fasta_verifier
@@ -51,11 +51,11 @@ def main():
 
                 # Extract sequence depth data form BAM file
                 for pileUpColumn in bam_handle.pileup(seq_id):
-                    seq_depth[pileUpColumn.pos] = pileUpColumn.n
+                    seq_depth[pileUpColumn.pos] = str(pileUpColumn.n)
 
                 # Compress sequence data if specified
                 if args.compressed:
-                    output('Compressing sequence: {0}'.format(str(seq_depth)),
+                    output('Compressing sequence of {0}'.format(seq_id),
                            args.verbosity, 2, log_file=args.log_file)
                     seq_fastr = compress_fastr(seq_depth)
                     output('Compressed sequence: {0}'.format(seq_fastr),
@@ -64,15 +64,15 @@ def main():
                     seq_fastr = '-'.join(seq_depth)
 
                 # Ensure that read depth is not only zero
-                sections = len(seq_fastr.split('-'))
-                if sections > 1 or seq_fastr.split('x')[1] != 0:
+                total_sum = sum([int(base) for base in seq_depth])
+                if total_sum == 0:
                     message = 'Appending read depth for {0} to {1}'.format(
                         seq_id, args.output)
                     output(message, args.verbosity, 2,
                            log_file=args.log_file)
-                    write_fastr([seq_id], [seq_fastr], args.output)
+                    write_fastr([seq_id], [seq_fastr], open(args.output, 'a'))
                 else:
-                    message = '{0} has a read depth of zero for ' + \
+                    message = '{0} has a read depth of zero for ' \
                               'each base. Not appending to {1}'.format(
                                   seq_id, args.output)
                     output(message, args.verbosity, 2,

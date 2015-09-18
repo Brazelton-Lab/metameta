@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 
-"""Utilities for FASTR related activities"""
+"""Utilities for FASTR related functions"""
 
-__version__ = '0.0.0.2'
+__version__ = '0.0.0.3'
 
 
 def compress_fastr(sequence):

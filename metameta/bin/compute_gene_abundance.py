@@ -5,7 +5,7 @@
 Usage:
 
     compute_gene_abundance.py [--bam] [--delimiter] [--fasta] [--fastr]
-                              [--normalize] <gff3> <ouput>
+                              [--normalize] <gff3> <output>
 
 Synopsis:
 
@@ -47,7 +47,7 @@ Supported Normalization Methods:
 
 from __future__ import print_function
 
-__version__ = '0.0.0.1'
+__version__ = '0.0.0.2'
 
 import argparse
 from bio_utils.iterators.gff3 import gff3_iter
@@ -80,12 +80,12 @@ def compute_gene_abundance_from_bam(bam_file, gff3_file, database,
                         end = int(entry['end']) - 1
                     if normalization == 'arpb':
                         reads_per_base = [pileUp.n for pileUp in bam_handle.
-                                          pileup(entry['seq_id'], start, end)]
+                            pileup(entry['seq_id'], start, end)]
                         coverage = normalize(normalization,
                                              per_base_depth=reads_per_base)
                     else:
                         read_count = len([read for read in bam_handle.fetch(
-                                          entry['seqid'], start, end)])
+                            entry['seqid'], start, end)])
                         gene_length = end - start
                         coverage = normalize(normalization,
                                              read_count=read_count,
@@ -106,9 +106,12 @@ def compute_gene_abundance_from_fasta(fasta_file, gff3_file, database,
                                            length=contig_length,
                                            read_count=read_count)
                 coverage = read_count
-                for gene in gff3_dict[entry['name']]:
-                    db_id = extract_db_id(gene['attributes'], database)
-                    out_handle.write('{0}\t{1}\n'.format(db_id, coverage))
+                if entry['name'] in gff3_dict:
+                    for gene in gff3_dict[entry['name']]:
+                        attributes = gff3_dict[entry['name']][gene] \
+                            ['attributes']
+                        db_id = extract_db_id(attributes, database)
+                        out_handle.write('{0}\t{1}\n'.format(db_id, coverage))
 
 
 def compute_gene_abundance_from_fastr(fastr_file, gff3_file, database,
@@ -127,26 +130,31 @@ def compute_gene_abundance_from_fastr(fastr_file, gff3_file, database,
                     fastr_sequence = decompress_fastr(entry['sequence'])
                     coverage_sequence = [int(base) for base in
                                          fastr_sequence.split('-')]
-                    for gene in gff3_dict[entry['name']]:
-                        if gene['start'] < gene['end']:
-                            start = int(gene['end']) - 1
-                            end = int(gene['start']) - 1
-                        else:
-                            start = int(gene['start']) - 1
-                            end = int(gene['end']) - 1
-                        reads_per_base = coverage_sequence[start:end]
-                        coverage = normalize(normalization,
-                                             per_base_depth=reads_per_base)
-                        db_id = extract_db_id(gene['attributes'], database)
-                        out_handle.write('{0}\t{1}\n'.format(db_id, coverage))
+                    if entry['name'] in gff3_dict:
+                        for gene in gff3_dict[entry['name']]:
+                            gene = gff3_dict[entry['name']][gene]
+                            if gene['start'] < gene['end']:
+                                start = int(gene['end']) - 1
+                                end = int(gene['start']) - 1
+                            else:
+                                start = int(gene['start']) - 1
+                                end = int(gene['end']) - 1
+                            reads_per_base = coverage_sequence[start:end]
+                            coverage = normalize(normalization,
+                                                 per_base_depth=reads_per_base)
+                            db_id = extract_db_id(gene['attributes'], database)
+                            out_handle.write('{0}\t{1}\n'.format(db_id,
+                                                                 coverage))
 
 
 def extract_db_id(attributes, database):
-    find_id = re.compile('{0}:.*?;'.format(database))
-    id_match = re.match(find_id, attributes)
-    if len(str(id_match)) == 1:
-        db_id = str(id_match).lstrip('{0}:'.format(database)).rstrip(';')
+    id_regex = re.compile('{0}:.*?;'.format(database))
+    search_results = re.findall(id_regex, attributes)
+    if len(search_results) == 1:
+        db_id = search_results[0].lstrip('{0}:'.format(database)).rstrip(';')
         return db_id
+    else:
+        return None
 
 
 def gff3_to_dict(gff3_file, database):
@@ -154,6 +162,10 @@ def gff3_to_dict(gff3_file, database):
     with open(gff3_file, 'rU') as gff3_handle:
         for entry in gff3_iter(gff3_handle):
             db_id = extract_db_id(entry['attributes'], database)
+            if db_id is None:
+                continue
+            elif entry['seqid'] not in gff3_dict:
+                gff3_dict[entry['seqid']] = {}
             gff3_dict[entry['seqid']][db_id] = entry
     return gff3_dict
 
@@ -166,7 +178,7 @@ def normalization_method(method):
     else:
         message = '{0} is not a supported normalization method. Supported ' \
                   'normalization methods follow:\n{1}'.format(method,
-                  '\n'.join(acceptable_methods))
+                                        '\n'.join(acceptable_methods))
         output(message, 0, 0, fatal=True)
 
 
@@ -183,7 +195,7 @@ def normalize(normalization, length=0, read_count=0,
             'rpkb': 1000000000
         }
         normalized_coverage = (read_count / (length / 1000)) * \
-                               normalization_factor[normalization]
+                              normalization_factor[normalization]
     elif normalization_method == 'arpb':
         assert type(per_base_depth) is list
         normalized_coverage = statistics.mean(per_base_depth)
@@ -202,7 +214,7 @@ if __name__ == '__main__':
     parser.add_argument('output', metavar='out_prefix',
                         default=None,
                         nargs='?',
-                        help='name of GFF3 file to write')
+                        help='name of TSV file to write')
     parser.add_argument('--bam', metavar='BAM',
                         default=None,
                         nargs='?',
@@ -296,7 +308,7 @@ if __name__ == '__main__':
         # Write header to output
         with open(args.output, 'w') as out_handle:
             out_handle.write('Database_ID\tCoverage_{0}\n'.format(
-                                                          args.normalize))
+                args.normalize))
         if args.bam:
             message = 'Computing gene abundances from BAM ' \
                       'file {0}'.format(args.bam)
