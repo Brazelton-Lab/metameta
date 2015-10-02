@@ -62,7 +62,7 @@ from screed.fasta import fasta_iter
 import statistics
 import sys
 
-__version__ = '0.0.0.6'
+__version__ = '0.0.0.7'
 
 
 def compute_gene_abundance_from_bam(bam_file, gff3_file, database,
@@ -72,7 +72,7 @@ def compute_gene_abundance_from_bam(bam_file, gff3_file, database,
             with open(gff3_file, 'rU') as gff3_handle:
                 for entry in gff3_iter(gff3_handle):
                     db_id = extract_db_id(entry['attributes'], database)
-                    if int(entry['start']) < int(entry['end']):
+                    if int(entry['start']) > int(entry['end']):
                         start = int(entry['end']) - 1
                         end = int(entry['start']) - 1
                     else:
