@@ -13,7 +13,7 @@ Synopsis:
 
 Required Arguments:
 
-    fastaq             FASTA or FASTQ file used as the alignment mapping
+    fastaq             FASTA or FASTQ file used as the alignment mappingg
                        reference, defaults to FASTA
     bam                BAM file containing alignment data
     output             Name of FASTR file containing read depth data to write

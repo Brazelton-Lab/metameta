@@ -47,8 +47,6 @@ Supported Normalization Methods:
 
 from __future__ import print_function
 
-__version__ = '0.0.0.2'
-
 import argparse
 from bio_utils.iterators.gff3 import gff3_iter
 from bio_utils.iterators.fastr import fastr_iter
@@ -64,6 +62,8 @@ from screed.fasta import fasta_iter
 import statistics
 import sys
 
+__version__ = '0.0.0.4'
+
 
 def compute_gene_abundance_from_bam(bam_file, gff3_file, database,
                                     normalization, out_file):
@@ -72,7 +72,7 @@ def compute_gene_abundance_from_bam(bam_file, gff3_file, database,
             with open(gff3_file, 'rU') as gff3_handle:
                 for entry in gff3_iter(gff3_handle):
                     db_id = extract_db_id(entry['attributes'], database)
-                    if entry['start'] < entry['end']:
+                    if int(entry['start']) < int(entry['end']):
                         start = int(entry['end']) - 1
                         end = int(entry['start']) - 1
                     else:
@@ -322,11 +322,11 @@ if __name__ == '__main__':
             message = 'Computing gene abundances from IDBA-UD generated ' \
                       'FASTA file {0}'.format(args.fasta)
             output(message, args.verbosity, 1, log_file=args.log_file)
-            compute_gene_abundance_from_fasta(args.fasta,
-                                              args.gff3,
-                                              args.database,
-                                              args.normalize,
-                                              args.output)
+            compute_gene_abundance_from_bam(args.fasta,
+                                            args.gff3,
+                                            args.database,
+                                            args.normalize,
+                                            args.output)
         elif args.fastr:
             message = 'Computing gene abundances from FASTR ' \
                       'file {0}'.format(args.fastr)
