@@ -62,7 +62,7 @@ from screed.fasta import fasta_iter
 import statistics
 import sys
 
-__version__ = '0.0.0.7'
+__version__ = '0.0.0.8'
 
 
 def compute_gene_abundance_from_bam(bam_file, gff3_file, database,
@@ -90,7 +90,8 @@ def compute_gene_abundance_from_bam(bam_file, gff3_file, database,
                         coverage = normalize(normalization,
                                              read_count=read_count,
                                              length=gene_length)
-                    out_handle.write('{0}\t{1}\n'.format(db_id, coverage))
+                    if db_id is not None:
+                        out_handle.write('{0}\t{1}\n'.format(db_id, coverage))
 
 
 def compute_gene_abundance_from_fasta(fasta_file, gff3_file, database,
@@ -111,7 +112,9 @@ def compute_gene_abundance_from_fasta(fasta_file, gff3_file, database,
                         attributes = gff3_dict[entry['name']][gene] \
                             ['attributes']
                         db_id = extract_db_id(attributes, database)
-                        out_handle.write('{0}\t{1}\n'.format(db_id, coverage))
+                        if db_id is not None:
+                            out_handle.write('{0}\t{1}\n'.format(db_id,
+                                                                 coverage))
 
 
 def compute_gene_abundance_from_fastr(fastr_file, gff3_file, database,
@@ -143,7 +146,8 @@ def compute_gene_abundance_from_fastr(fastr_file, gff3_file, database,
                             coverage = normalize(normalization,
                                                  per_base_depth=reads_per_base)
                             db_id = extract_db_id(gene['attributes'], database)
-                            out_handle.write('{0}\t{1}\n'.format(db_id,
+                            if db_id is not None:
+                                out_handle.write('{0}\t{1}\n'.format(db_id,
                                                                  coverage))
 
 
