@@ -62,7 +62,7 @@ from screed.fasta import fasta_iter
 import statistics
 import sys
 
-__version__ = '0.0.0.5'
+__version__ = '0.0.0.6'
 
 
 def compute_gene_abundance_from_bam(bam_file, gff3_file, database,
@@ -313,16 +313,16 @@ if __name__ == '__main__':
             message = 'Computing gene abundances from BAM ' \
                       'file {0}'.format(args.bam)
             output(message, args.verbosity, 1, log_file=args.log_file)
-            compute_gene_abundance_from_fasta(args.bam,
-                                              args.gff3,
-                                              args.database,
-                                              args.normalize,
-                                              args.output)
+            compute_gene_abundance_from_bam(args.bam,
+                                            args.gff3,
+                                            args.database,
+                                            args.normalize,
+                                            args.output)
         elif args.fasta:
             message = 'Computing gene abundances from IDBA-UD generated ' \
                       'FASTA file {0}'.format(args.fasta)
             output(message, args.verbosity, 1, log_file=args.log_file)
-            compute_gene_abundance_from_bam(args.bam,
+            compute_gene_abundance_from_bam(args.fasta,
                                             args.gff3,
                                             args.database,
                                             args.normalize,
