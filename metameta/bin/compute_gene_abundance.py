@@ -45,6 +45,7 @@ Supported Normalization Methods:
     rpkb             rpk times 1,000,000,000
 """
 
+from __future__ import division
 from __future__ import print_function
 
 import argparse
@@ -62,7 +63,7 @@ from screed.fasta import fasta_iter
 import statistics
 import sys
 
-__version__ = '0.0.0.8'
+__version__ = '0.0.0.9'
 
 
 def compute_gene_abundance_from_bam(bam_file, gff3_file, database,
