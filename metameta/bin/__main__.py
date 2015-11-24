@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-"""metameta 0.0.0.50 - meta-transcriptome/genome mapping analysis toolkit
+"""metameta 0.0.0.65 - meta-transcriptome/genome mapping analysis toolkit
 
 Usage:
 
@@ -42,16 +42,16 @@ Tools:
 
     compute_gene_abundance:
 
-            Reads a GFF3 file and a FASTR or BAM file to produce a
-            tab-delimited file containing genes and their abundance values.
+        Reads a GFF3 file and a FASTR or BAM file to produce a
+        tab-delimited file containing genes and their abundance values.
 
     generate_fastr:
 
-            Generates a FASTR file containing per base read depth data
-            of a given FASTA or FASTQ file.
+        Generates a FASTR file containing per base read depth data
+        of a given FASTA or FASTQ file.
 """
 
-__version__ = '0.0.0.50'
+__version__ = '0.0.0.65'
 
 import argparse
 import metameta.bin
@@ -64,7 +64,7 @@ def tool_check(desired_tool):
     """Checks if given tool is valid and prints a list of tools if not"""
 
     tools = [
-        'compute_gene_abundance',
+        'count_objects',
         'generate_fastr',
     ]
     for tool in tools:

@@ -4,20 +4,18 @@
 
 Usage:
 
-    compute_gene_abundance.py [--bam] [--delimiter] [--fasta] [--fastr]
-                              [--normalize] <gff3> <output>
+    count_objects.py [--bam] [--delimiter] [--fastr] [--normalize] [--gff3]
+                     <output>
 
 Synopsis:
 
-    calculates and normalizes gene abundance of annotated genes in a GFF3
-    file using a variety of files to obtain abundance data from:
+    Calculates and normalizes various forms of coverage and counting.
+    This includes calculating gene abundance
     BAM files
-    FASTA files from IDBA-UD
     FASTR files
 
 Required Arguments:
 
-    gff3             GFF3 formatted annotation file
     output           CSV file containing gene ID and abundance,
                      default delimiter is "\t"
 
@@ -26,21 +24,19 @@ Optional Arguments:
     --bam            BAM file containing alignment data
     --delimiter      the character to delimit the output file by
                      [Default: '\t']
-    --fasta          IDBA-UD generated FASTA file used for assembly
     --fastr          FASTR file containing read depth data
+    --gff3           GFF3 formatted annotation file
     --normalize      Method to calculate coverage values (see below for more
-                     information on normalization) [Default: 'read_count']
+                     information on normalization) [Default: aprb]
 
 Supported Normalization Methods:
 
     arpb             Average Reads Per Base: average depth coverage of each
                      base
-    read_count       Uses the number of reads used to assemble contig as
-                     coverage [Default]
-    rpk              Reads Per Kilobase: number of reads used to assemble
+    rpk              Reads Per Kilobase: number of reads mapping to a
                      contig divided by kilobases in the contig (contig length
                      divided by 1,000)
-    rpkt, rpb        rpk times 1,000 (equivalent to reads per base)
+    rpkt             rpk times 1,000
     rpkm             rpk times 1,000,000
     rpkb             rpk times 1,000,000,000
 """
@@ -51,19 +47,19 @@ from __future__ import print_function
 import argparse
 from bio_utils.iterators.gff3 import gff3_iter
 from bio_utils.iterators.fastr import fastr_iter
+from bio_utils.iterators.m8 import m8_iter
 from bio_utils.verifiers.binary import binary_verifier
-from bio_utils.verifiers.fasta import fasta_verifier
 from bio_utils.verifiers.fastr import fastr_verifier
 from bio_utils.verifiers.gff3 import gff3_verifier
+from bio_utils.verifiers.m8 import m8_verifier
 from metameta.metameta_utils.fastr_utils import decompress_fastr
 from metameta.metameta_utils.output import output
 import pysam
 import re
-from screed.fasta import fasta_iter
 import statistics
 import sys
 
-__version__ = '0.0.0.9'
+__version__ = '0.0.0.17'
 
 
 def compute_gene_abundance_from_bam(bam_file, gff3_file, database,
@@ -95,27 +91,33 @@ def compute_gene_abundance_from_bam(bam_file, gff3_file, database,
                         out_handle.write('{0}\t{1}\n'.format(db_id, coverage))
 
 
-def compute_gene_abundance_from_fasta(fasta_file, gff3_file, database,
-                                      normalization, out_file):
-    gff3_dict = gff3_to_dict(gff3_file, database)
-    with open(out_file, 'a') as out_handle:
-        with open(fasta_file, 'rU') as fasta_handle:
-            for entry in fasta_iter(fasta_handle):
-                read_count = entry['description'].split('read_count_')[-1]
-                if normalization != 'read_count':
-                    contig_length = len(entry['sequence'])
-                    read_count = normalize(normalization,
-                                           length=contig_length,
-                                           read_count=read_count)
-                coverage = read_count
-                if entry['name'] in gff3_dict:
-                    for gene in gff3_dict[entry['name']]:
-                        attributes = gff3_dict[entry['name']][gene] \
-                            ['attributes']
-                        db_id = extract_db_id(attributes, database)
-                        if db_id is not None:
-                            out_handle.write('{0}\t{1}\n'.format(db_id,
-                                                                 coverage))
+def compute_gene_abundance_from_blast(blast_files, out_file):
+    with open(out_file, 'w') as out_handle:
+        genes = {}
+        for blast_file in blast_files:
+            with open(blast_file, 'rU') as blast_handle:
+                for entry in m8_iter(blast_handle):
+                    try:
+                        assert entry['subjectID'] in genes
+                    except AssertionError:
+                        genes[entry['subjectID']] = {}
+                    try:
+                        genes[entry['subjectID']][blast_file] += 1
+                    except KeyError:
+                        genes[entry['subjectID']][blast_file] = 1
+        # Ensure there is a number for every gene
+        for gene in genes:
+            for blast_file in blast_files:
+                try:
+                    assert blast_file in genes[gene]
+                except AssertionError:
+                    genes[gene][blast_file] = 0
+        out_handle.write('Genes\t{0}\n'.format('\t'.join(blast_files)))
+        for key in genes.keys():
+            out_handle.write('{0}'.format(key))
+            for blast_file in blast_files:
+                out_handle.write('\t{0}'.format(str(genes[key][blast_file])))
+            out_handle.write('\n')
 
 
 def compute_gene_abundance_from_fastr(fastr_file, gff3_file, database,
@@ -176,8 +178,7 @@ def gff3_to_dict(gff3_file, database):
 
 
 def normalization_method(method):
-    acceptable_methods = ['read_count', 'rpk', 'rpkt', 'rpkm', 'rpkb', ' rpb',
-                          'arpb']
+    acceptable_methods = ['rpkt', 'rpkm', 'rpkb', ' rpk', 'arpb']
     if method in acceptable_methods:
         return str(method)
     else:
@@ -207,11 +208,16 @@ def normalize(normalization, length=0, read_count=0,
     return normalized_coverage
 
 
+def split_args(arguments):
+    arguments = [i.lstrip() for i in arguments.split(',')]
+    return arguments
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.
                                      RawDescriptionHelpFormatter)
-    parser.add_argument('gff3', metavar='GFF3',
+    parser.add_argument('--gff3', metavar='GFF3',
                         default=None,
                         nargs='?',
                         help='PROKKA GFF3 file with annotations for the same'
@@ -224,13 +230,14 @@ if __name__ == '__main__':
                         default=None,
                         nargs='?',
                         help='BAM file containing mapping data')
+    parser.add_argument('--blast', metavar='BLAST Table',
+                        default=None,
+                        nargs='?',
+                        type=split_args,
+                        help='BLAST output to convert to count table')
     parser.add_argument('-d', '--database', metavar='DB',
                         default='ko',
                         help='extract hits from database "DB" [default: ko]')
-    parser.add_argument('--fasta', metavar='FASTA',
-                        default=None,
-                        nargs='?',
-                        help='IDBA generated FASTA file with read count data')
     parser.add_argument('--fastr', metavar='FASTR',
                         default=None,
                         nargs='?',
@@ -241,8 +248,8 @@ if __name__ == '__main__':
                         help='log file to print all messages to')
     parser.add_argument('--normalize', metavar='normalization method',
                         type=normalization_method,
-                        default='read_count',
-                        help='how to normailze data [default: read_count]')
+                        default='arpb',
+                        help='how to normailze data [default: arpb]')
     parser.add_argument('-v', '--verbosity',
                         action='count',
                         default=0,
@@ -257,12 +264,8 @@ if __name__ == '__main__':
 
     if args.version:
         print(__version__)
-    elif args.fastr is None and args.fasta is None and args.bam is None:
+    elif args.fastr is None and args.bam is None and args.blast is None:
         print(__doc__)
-    elif args.gff3 is None:
-        message = 'Must specify a GFF3 file and either a BAM, FASTA, ' \
-                  'or FASTR file'
-        output(message, args.verbosity, 0, log_file=args.log_, fatal=True)
     else:
         if args.verify:
 
@@ -277,16 +280,16 @@ if __name__ == '__main__':
                        args.verbosity, 1, log_file=args.log_file,
                        fatal=not validBam)
 
-            # Verify FASTA file
-            if args.fasta:
-                output('Verifying {0}'.format(args.fasta), args.verbosity, 1,
+            # Verify BLAST file
+            if args.blast:
+                output('Verifying {0}'.format(args.blast), args.verbosity, 1,
                        log_file=args.log_file)
-                with open(args.fasta, 'rU') as in_handle:
-                    validFasta = fasta_verifier(in_handle)
-                fastaValidity = 'valid' if validFasta else 'invalid'
-                output('{0} is {1}'.format(args.fasta, fastaValidity),
+                with open(args.blast, 'rU') as in_handle:
+                    validBlast = m8_verifier(in_handle)
+                blastValidity = 'valid' if validBlast else 'invalid'
+                output('(0} is {1}'.format(args.blast, blastValidity),
                        args.verbosity, 1, log_file=args.log_file,
-                       fatal=not validFasta)
+                       fatal=not blastValidity)
 
             # Verify FASTR file
             if args.fastr:
@@ -323,15 +326,12 @@ if __name__ == '__main__':
                                             args.database,
                                             args.normalize,
                                             args.output)
-        elif args.fasta:
-            message = 'Computing gene abundances from IDBA-UD generated ' \
-                      'FASTA file {0}'.format(args.fasta)
+        elif args.blast:
+            message = 'Computing gene abundances from BLAST ' \
+                      'file {0}'.format(args.blast)
             output(message, args.verbosity, 1, log_file=args.log_file)
-            compute_gene_abundance_from_bam(args.fasta,
-                                            args.gff3,
-                                            args.database,
-                                            args.normalize,
-                                            args.output)
+            compute_gene_abundance_from_blast(args.blast,
+                                              args.output)
         elif args.fastr:
             message = 'Computing gene abundances from FASTR ' \
                       'file {0}'.format(args.fastr)

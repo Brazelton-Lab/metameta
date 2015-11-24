@@ -25,9 +25,6 @@ Optional Arguments:
 """
 
 from __future__ import print_function
-
-__version__ = '0.0.0.13'
-
 import argparse
 from bio_utils.verifiers.fasta import fasta_verifier
 from bio_utils.verifiers.fastq import fastq_verifier
@@ -38,6 +35,8 @@ import pysam
 from screed.fasta import fasta_iter
 from screed.fastq import fastq_iter
 import sys
+
+__version__ = '0.0.0.14'
 
 
 def main():
@@ -74,7 +73,7 @@ def main():
                 else:
                     message = '{0} has a read depth of zero for ' \
                               'each base. Not appending to {1}'.format(
-                                  seq_id, args.output)
+                        seq_id, args.output)
                     output(message, args.verbosity, 2,
                            log_file=args.log_file)
 
@@ -125,7 +124,6 @@ if __name__ == '__main__':
         output(message, args.verbosity, 0, fatal=True)
     else:
         if args.verify:
-
             # Verify args.fastq
             output('Verifying {0}'.format(args.fastaq), args.verbosity, 1,
                    log_file=args.log_file)
