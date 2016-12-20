@@ -22,6 +22,24 @@ Optional Arguments:
 
     --compressed       compress FASTR file being written
     --fastq            specifies that fastaq is a FASTQ file
+
+Copyright:
+
+    generate_fastr.py generate FASTR file summarizing FASTA coverages
+    Copyright (C) 2015  Alex Hyer
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import print_function
@@ -36,7 +54,12 @@ from screed.fasta import fasta_iter
 from screed.fastq import fastq_iter
 import sys
 
-__version__ = '0.0.0.14'
+__author__ = 'Alex Hyer'
+__email__ = 'theonehyer@gmail.com'
+__license__ = 'GPLv3'
+__maintainer__ = 'Alex Hyer'
+__status__ = 'Inactive'
+__version__ = '0.0.0.15'
 
 
 def main():

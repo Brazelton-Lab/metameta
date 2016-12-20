@@ -2,6 +2,11 @@
 **metameta**
 ============
 
+*!!!IMPORTANT!!!*
+=================
+
+metameta is incomplete and inactive. Do not use.
+
 *Purpose*
 ---------
 Toolkit for analyzing meta-transcriptome/metagenome mapping data
